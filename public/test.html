@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heat Test Page</title>
+  <script src="/heat-client.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    #container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    #info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      max-width: 300px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    #info h2 {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    #info p {
+      margin: 5px 0;
+      opacity: 0.9;
+    }
+
+    .status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+      background: #f44336;
+    }
+
+    .status.connected {
+      background: #4caf50;
+      box-shadow: 0 0 10px #4caf50;
+    }
+
+    .marker {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,100,100,0.5) 100%);
+      border-radius: 50%;
+      border: 2px solid white;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: fadeOut 2s ease-out forwards;
+      z-index: 50;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2);
+      }
+    }
+
+    #stats {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #stats p {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+
+  <div id="info">
+    <h2>🔥 Heat Test Page</h2>
+    <p>
+      <span class="status" id="status"></span>
+      <span id="statusText">Connecting...</span>
+    </p>
+    <p>Channel: <strong id="channelId">-</strong></p>
+    <p>Click anywhere to send events!</p>
+    
+    <div id="stats">
+      <p>Total clicks: <span id="clickCount">0</span></p>
+      <p>Your clicks: <span id="myClickCount">0</span></p>
+    </div>
+  </div>
+
+  <script>
+    // Get channel from URL or use default
+    const channelId = getChannelFromURL('channel', '12345');
+    document.getElementById('channelId').textContent = channelId;
+
+    // Stats
+    let totalClicks = 0;
+    let myClicks = 0;
+
+    // Create Heat client
+    const heat = new HeatClient(channelId, {
+      apiUrl: 'ws://localhost:7777',
+      debugMode: true,
+    });
+
+    // Connection events
+    heat.on('connected', () => {
+      document.getElementById('status').classList.add('connected');
+      document.getElementById('statusText').textContent = 'Connected';
+    });
+
+    heat.on('disconnected', () => {
+      document.getElementById('status').classList.remove('connected');
+      document.getElementById('statusText').textContent = 'Disconnected';
+    });
+
+    // Handle incoming clicks
+    heat.on('click', (e) => {
+      const data = e.detail;
+      totalClicks++;
+      document.getElementById('clickCount').textContent = totalClicks;
+      
+      // Create visual marker
+      createMarker(parseFloat(data.x), parseFloat(data.y));
+    });
+
+    // Create visual click marker
+    function createMarker(x, y) {
+      const marker = document.createElement('div');
+      marker.className = 'marker';
+      marker.style.left = (x * window.innerWidth) + 'px';
+      marker.style.top = (y * window.innerHeight) + 'px';
+      
+      document.getElementById('container').appendChild(marker);
+      
+      setTimeout(() => {
+        marker.remove();
+      }, 2000);
+    }
+
+    // Capture local clicks
+    document.addEventListener('click', (event) => {
+      const x = event.clientX / window.innerWidth;
+      const y = event.clientY / window.innerHeight;
+      
+      if (heat.sendClick(x, y)) {
+        myClicks++;
+        document.getElementById('myClickCount').textContent = myClicks;
+      }
+    });
+  </script>
+</body>
+</html>

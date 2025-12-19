@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heat - Heatmap Demo</title>
+  <script src="/heat-client.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000;
+      color: white;
+      overflow: hidden;
+    }
+
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    #info {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background: #f44336;
+    }
+
+    .status.connected {
+      background: #4caf50;
+    }
+
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    button {
+      background: #667eea;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 0 5px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="info">
+    <div>
+      <span class="status" id="status"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <div style="margin-top: 10px; font-size: 12px;">
+      Clicks: <span id="clickCount">0</span>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button onclick="clearHeatmap()">Clear Heatmap</button>
+    <button onclick="toggleIntensity()">Toggle Intensity</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Heat data points
+    const heatPoints = [];
+    let clickCount = 0;
+    let intensityMultiplier = 1;
+
+    // Get channel from URL
+    const channelId = getChannelFromURL('channel', '12345');
+
+    // Create Heat client
+    const heat = new HeatClient(channelId, {
+      apiUrl: 'ws://localhost:7777',
+      debugMode: true,
+    });
+
+    // Connection status
+    heat.on('connected', () => {
+      document.getElementById('status').classList.add('connected');
+      document.getElementById('statusText').textContent = 'Heatmap - Click to add heat!';
+    });
+
+    heat.on('disconnected', () => {
+      document.getElementById('status').classList.remove('connected');
+      document.getElementById('statusText').textContent = 'Disconnected';
+    });
+
+    // Handle clicks
+    heat.on('click', (e) => {
+      const data = e.detail;
+      addHeatPoint(parseFloat(data.x), parseFloat(data.y));
+      clickCount++;
+      document.getElementById('clickCount').textContent = clickCount;
+    });
+
+    // Add heat point
+    function addHeatPoint(x, y) {
+      heatPoints.push({
+        x: x * canvas.width,
+        y: y * canvas.height,
+        intensity: 1,
+        timestamp: Date.now(),
+      });
+
+      // Keep only last 500 points for performance
+      if (heatPoints.length > 500) {
+        heatPoints.shift();
+      }
+    }
+
+    // Render heatmap
+    function render() {
+      // Clear canvas with fade effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw heat points
+      for (let i = 0; i < heatPoints.length; i++) {
+        const point = heatPoints[i];
+        
+        // Fade out old points
+        const age = Date.now() - point.timestamp;
+        const maxAge = 30000; // 30 seconds
+        const ageFactor = Math.max(0, 1 - age / maxAge);
+
+        if (ageFactor <= 0) {
+          heatPoints.splice(i, 1);
+          i--;
+          continue;
+        }
+
+        // Create radial gradient
+        const gradient = ctx.createRadialGradient(
+          point.x, point.y, 0,
+          point.x, point.y, 60 * intensityMultiplier
+        );
+
+        const alpha = point.intensity * ageFactor * 0.3;
+        gradient.addColorStop(0, `rgba(255, 0, 0, ${alpha})`);
+        gradient.addColorStop(0.3, `rgba(255, 100, 0, ${alpha * 0.7})`);
+        gradient.addColorStop(0.6, `rgba(255, 200, 0, ${alpha * 0.4})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(
+          point.x - 60 * intensityMultiplier,
+          point.y - 60 * intensityMultiplier,
+          120 * intensityMultiplier,
+          120 * intensityMultiplier
+        );
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    // Start rendering
+    render();
+
+    // Capture local clicks
+    capturePageClicks(heat);
+
+    // Controls
+    function clearHeatmap() {
+      heatPoints.length = 0;
+      clickCount = 0;
+      document.getElementById('clickCount').textContent = clickCount;
+      ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function toggleIntensity() {
+      intensityMultiplier = intensityMultiplier === 1 ? 2 : 1;
+    }
+  </script>
+</body>
+</html>

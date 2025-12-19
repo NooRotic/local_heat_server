@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heat - Markers Demo</title>
+  <script src="/heat-client.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: white;
+      overflow: hidden;
+    }
+
+    .marker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      transform: translate(-16px, -32px);
+      pointer-events: none;
+      transition: all 0.3s ease-out;
+    }
+
+    .marker svg {
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    #info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      background: #f44336;
+    }
+
+    .status.connected {
+      background: #4caf50;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <span class="status" id="status"></span>
+    <span id="statusText">Connecting...</span>
+  </div>
+
+  <script>
+    const channelId = getChannelFromURL('channel', '12345');
+    const markers = new Map();
+
+    // Create Heat client
+    const heat = new HeatClient(channelId, {
+      apiUrl: 'ws://localhost:7777',
+      debugMode: true,
+    });
+
+    // Connection status
+    heat.on('connected', () => {
+      document.getElementById('status').classList.add('connected');
+      document.getElementById('statusText').textContent = 'Markers Demo - Click anywhere!';
+    });
+
+    heat.on('disconnected', () => {
+      document.getElementById('status').classList.remove('connected');
+      document.getElementById('statusText').textContent = 'Disconnected';
+    });
+
+    // Handle clicks
+    heat.on('click', (e) => {
+      const data = e.detail;
+      updateMarker(data.id, parseFloat(data.x), parseFloat(data.y));
+    });
+
+    // Create or update marker
+    function updateMarker(userId, x, y) {
+      let marker = markers.get(userId);
+      
+      if (!marker) {
+        marker = createMarkerElement();
+        document.body.appendChild(marker);
+        markers.set(userId, marker);
+      }
+
+      // Update position
+      marker.style.left = (x * window.innerWidth) + 'px';
+      marker.style.top = (y * window.innerHeight) + 'px';
+    }
+
+    // Create marker SVG element
+    function createMarkerElement() {
+      const marker = document.createElement('div');
+      marker.className = 'marker';
+      
+      // Random color for each user
+      const hue = Math.random() * 360;
+      const color = `hsl(${hue}, 70%, 60%)`;
+      
+      marker.innerHTML = `
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2C10.5 2 6 6.5 6 12c0 7 10 18 10 18s10-11 10-18c0-5.5-4.5-10-10-10z" 
+                fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="12" r="4" fill="white"/>
+        </svg>
+      `;
+      
+      return marker;
+    }
+
+    // Capture local clicks
+    capturePageClicks(heat);
+  </script>
+</body>
+</html>

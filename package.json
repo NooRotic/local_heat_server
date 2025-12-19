@@ -1,0 +1,36 @@
+{
+  "name": "heat-server-emulator",
+  "version": "1.0.0",
+  "description": "Local Heat API server emulator for offline development and testing",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "serve": "npm run build && npm start",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "twitch",
+    "heat",
+    "websocket",
+    "emulator",
+    "development"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/ws": "^8.5.13",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
