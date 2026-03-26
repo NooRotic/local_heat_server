@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Heat Test Page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <script src="/theme-loader.js"></script>
   <script src="/heat-client.js"></script>
   <style>
     * {
@@ -13,9 +17,9 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      font-family: var(--font-body, 'Courier New', monospace);
+      background: var(--color-background, #0a0a0a);
+      color: var(--color-text, #fff);
       overflow: hidden;
       cursor: crosshair;
     }
@@ -32,18 +36,22 @@
       position: fixed;
       top: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(26, 26, 26, 0.9);
+      border: 2px solid var(--color-border, #004400);
+      border-radius: var(--effect-border-radius, 12px);
       padding: 15px 20px;
-      border-radius: 8px;
       font-size: 14px;
       max-width: 300px;
       z-index: 100;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(var(--effect-backdrop-blur, 10px));
     }
 
     #info h2 {
-      margin-bottom: 10px;
+      font-family: var(--font-heading, 'Orbitron', monospace);
       font-size: 18px;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 8px rgba(0,255,136,0.8));
+      margin-bottom: 10px;
     }
 
     #info p {
@@ -57,21 +65,27 @@
       height: 10px;
       border-radius: 50%;
       margin-right: 5px;
-      background: #f44336;
+      background: var(--color-status-disconnected, #ff4444);
     }
 
     .status.connected {
-      background: #4caf50;
-      box-shadow: 0 0 10px #4caf50;
+      background: var(--color-status-connected, #00ff88);
+      box-shadow: 0 0 8px var(--color-status-connected, #00ff88);
+      animation: neon-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes neon-pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--color-status-connected, #00ff88); }
+      50% { box-shadow: 0 0 2px var(--color-status-connected, #00ff88); }
     }
 
     .marker {
       position: absolute;
       width: 20px;
       height: 20px;
-      background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,100,100,0.5) 100%);
+      background: radial-gradient(circle, rgba(0,255,136,0.9) 0%, rgba(0,255,136,0.2) 100%);
       border-radius: 50%;
-      border: 2px solid white;
+      border: 2px solid var(--color-primary, #00ff88);
       transform: translate(-50%, -50%);
       pointer-events: none;
       animation: fadeOut 2s ease-out forwards;
@@ -92,12 +106,17 @@
     #stats {
       margin-top: 15px;
       padding-top: 15px;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      border-top: 1px solid var(--color-border, #004400);
+      font-family: var(--font-body, 'Courier New', monospace);
+      color: var(--color-text-secondary, #adadb8);
     }
 
     #stats p {
       font-size: 12px;
-      font-family: 'Courier New', monospace;
+    }
+
+    #info strong {
+      color: var(--color-primary, #00ff88);
     }
   </style>
 </head>
@@ -105,14 +124,14 @@
   <div id="container"></div>
 
   <div id="info">
-    <h2>🔥 Heat Test Page</h2>
+    <h2>Heat Test Page</h2>
     <p>
       <span class="status" id="status"></span>
       <span id="statusText">Connecting...</span>
     </p>
     <p>Channel: <strong id="channelId">-</strong></p>
     <p>Click anywhere to send events!</p>
-    
+
     <div id="stats">
       <p>Total clicks: <span id="clickCount">0</span></p>
       <p>Your clicks: <span id="myClickCount">0</span></p>
@@ -150,7 +169,7 @@
       const data = e.detail;
       totalClicks++;
       document.getElementById('clickCount').textContent = totalClicks;
-      
+
       // Create visual marker
       createMarker(parseFloat(data.x), parseFloat(data.y));
     });
@@ -161,9 +180,9 @@
       marker.className = 'marker';
       marker.style.left = (x * window.innerWidth) + 'px';
       marker.style.top = (y * window.innerHeight) + 'px';
-      
+
       document.getElementById('container').appendChild(marker);
-      
+
       setTimeout(() => {
         marker.remove();
       }, 2000);
@@ -173,7 +192,7 @@
     document.addEventListener('click', (event) => {
       const x = event.clientX / window.innerWidth;
       const y = event.clientY / window.innerHeight;
-      
+
       if (heat.sendClick(x, y)) {
         myClicks++;
         document.getElementById('myClickCount').textContent = myClicks;

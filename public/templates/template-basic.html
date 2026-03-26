@@ -1,9 +1,19 @@
+<!--
+  Heat Template — RipTheAI Theme
+  Available CSS vars: --color-primary, --color-accent, --color-background, --color-surface,
+    --color-text, --color-border, --font-heading, --font-body, --glow-text, --glow-box
+  Customize at: http://localhost:7778/settings.html
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Custom Heat Template</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <script src="/theme-loader.js"></script>
   <script src="/heat-client.js"></script>
   <style>
     * {
@@ -13,9 +23,9 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: white;
+      font-family: var(--font-body, 'Courier New', monospace);
+      background: var(--color-background, #0a0a0a);
+      color: var(--color-text, #fff);
       overflow: hidden;
     }
 
@@ -30,7 +40,25 @@
       justify-content: center;
     }
 
-    /* Add your custom styles here */
+    /* Page heading — uses Orbitron and theme primary color */
+    #main h1 {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 8px rgba(0,255,136,0.8));
+    }
+
+    /* Click ripple animation — declared here so JS doesn't need to inject it */
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      to   { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+    }
+
+    @keyframes neon-pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--color-status-connected, #00ff88); }
+      50% { box-shadow: 0 0 2px var(--color-status-connected, #00ff88); }
+    }
+
+    /* Add your custom styles below */
   </style>
 </head>
 <body>
@@ -66,7 +94,7 @@
 
       // Add your click handling logic here
       console.log(`Click from ${userId} at (${x}, ${y})`);
-      
+
       // Example: Create a visual effect
       createClickEffect(x, y);
     });
@@ -75,33 +103,28 @@
     capturePageClicks(heat);
 
     // Example: Create visual click effect
+    // Uses theme primary color if HeatTheme is loaded, otherwise falls back to #00ff88
     function createClickEffect(normalizedX, normalizedY) {
+      const color = (window.HeatTheme && window.HeatTheme.colors.primary) || '#00ff88';
+
       const effect = document.createElement('div');
       effect.style.position = 'fixed';
       effect.style.left = (normalizedX * window.innerWidth) + 'px';
       effect.style.top = (normalizedY * window.innerHeight) + 'px';
       effect.style.width = '20px';
       effect.style.height = '20px';
-      effect.style.background = 'rgba(255, 100, 100, 0.8)';
+      // Convert hex primary to rgba by appending transparency via a gradient trick
+      effect.style.background = `radial-gradient(circle, ${color}cc 0%, ${color}33 100%)`;
       effect.style.borderRadius = '50%';
+      effect.style.border = `1px solid ${color}`;
       effect.style.transform = 'translate(-50%, -50%)';
       effect.style.pointerEvents = 'none';
       effect.style.animation = 'fadeOut 1s ease-out forwards';
-      
+
       document.body.appendChild(effect);
-      
+
       setTimeout(() => effect.remove(), 1000);
     }
-
-    // CSS animation for fade out
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeOut {
-        from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        to { opacity: 0; transform: translate(-50%, -50%) scale(2); }
-      }
-    `;
-    document.head.appendChild(style);
   </script>
 </body>
 </html>
