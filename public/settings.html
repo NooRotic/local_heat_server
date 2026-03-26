@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme Settings — Heat Server Emulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="/theme-loader.js"></script>
+  <style>
+    /* ─── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #374151; }
+    ::-webkit-scrollbar-thumb { background: #ea580c; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #f97316; }
+
+    /* ─── Base ───────────────────────────────────────────────── */
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+      padding-bottom: 100px; /* space for sticky footer */
+      line-height: 1.5;
+    }
+
+    /* ─── Page Header ────────────────────────────────────────── */
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 10, 0.95);
+      border-bottom: 2px solid #004400;
+      backdrop-filter: blur(12px);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #00ff88;
+      text-decoration: none;
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border: 1px solid #004400;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .back-link:hover {
+      background: rgba(0, 255, 136, 0.08);
+      border-color: #00ff88;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .back-arrow {
+      font-size: 14px;
+    }
+
+    .page-title {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: clamp(16px, 3vw, 24px);
+      font-weight: 900;
+      color: #00ff88;
+      text-shadow: 0 0 16px #00ff88, 0 0 32px #00ff88;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .page-title span {
+      color: #adadb8;
+      font-weight: 400;
+      font-size: 0.6em;
+      display: block;
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    @media (max-width: 1100px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+      .preview-column {
+        order: -1;
+      }
+    }
+
+    .settings-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+
+    .preview-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ─── Section Panel ──────────────────────────────────────── */
+    .section-panel {
+      background: #1a1a1a;
+      border: 2px solid #004400;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+    }
+
+    .section-panel:hover {
+      border-color: #006600;
+    }
+
+    .section-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #004400;
+      background: rgba(0, 255, 136, 0.03);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #00ff88;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .section-icon {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .section-body {
+      padding: 20px;
+    }
+
+    /* ─── Color Group ────────────────────────────────────────── */
+    .color-group {
+      margin-bottom: 24px;
+    }
+
+    .color-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .color-group-label {
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      color: #ff6b35;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .color-row-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    /* ─── Color Row ──────────────────────────────────────────── */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 8px 10px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .color-row:hover {
+      border-color: #004400;
+      background: #111111;
+    }
+
+    .color-swatch-wrap {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #333;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .color-swatch-wrap input[type="color"] {
+      position: absolute;
+      inset: 0;
+      width: 130%;
+      height: 130%;
+      top: -15%;
+      left: -15%;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 0;
+      background: none;
+    }
+
+    .color-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .color-label {
+      font-size: 11px;
+      color: #adadb8;
+      display: block;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .color-hex-input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #00ff88;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      padding: 3px 6px;
+      outline: none;
+      transition: border-color 0.2s ease;
+      min-width: 0;
+    }
+
+    .color-hex-input:focus {
+      border-color: #00ff88;
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.3);
+    }
+
+    /* ─── RGBA Row ───────────────────────────────────────────── */
+    .rgba-row {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s ease;
+    }
+
+    .rgba-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .rgba-row:hover {
+      border-color: #004400;
+    }
+
+    .rgba-label {
+      font-size: 11px;
+      color: #adadb8;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .rgba-input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #00ff88;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      padding: 5px 8px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .rgba-input:focus {
+      border-color: #00ff88;
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.3);
+    }
+
+    .rgba-hint {
+      font-size: 10px;
+      color: #77777d;
+      margin-top: 4px;
+    }
+
+    /* ─── Font Section ───────────────────────────────────────── */
+    .font-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .font-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .font-label {
+      font-size: 11px;
+      color: #adadb8;
+    }
+
+    .font-select {
+      background: #0f0f0f;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #00ff88;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300ff88' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+      transition: border-color 0.2s ease;
+    }
+
+    .font-select:focus, .font-select:hover {
+      border-color: #00ff88;
+      box-shadow: 0 0 6px rgba(0, 255, 136, 0.2);
+    }
+
+    /* ─── Effects / Sliders ──────────────────────────────────── */
+    .effects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .slider-label {
+      font-size: 11px;
+      color: #adadb8;
+    }
+
+    .slider-value {
+      font-size: 12px;
+      color: #00ff88;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* Custom range slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #2a2a2a;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ff88;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+      transition: box-shadow 0.2s ease, transform 0.1s ease;
+      margin-top: -6px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #00ff88;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb,
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 14px rgba(0, 255, 136, 0.9);
+      transform: scale(1.15);
+    }
+
+    /* ─── Preview Panel ──────────────────────────────────────── */
+    .preview-sticky {
+      position: sticky;
+      top: 90px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .preview-card {
+      background: var(--preview-panelBg, rgba(0, 20, 0, 0.85));
+      border-width: var(--preview-borderWidth, 2px);
+      border-style: solid;
+      border-color: var(--preview-borderAccent, #00ff88);
+      border-radius: var(--preview-borderRadius, 12px);
+      padding: 20px;
+      backdrop-filter: blur(var(--preview-backdropBlur, 10px));
+      box-shadow: 0 0 16px rgba(0, 255, 136, 0.15), 0 0 32px rgba(0, 255, 136, 0.08);
+      transition: all 0.25s ease;
+    }
+
+    .preview-heading {
+      font-family: var(--preview-fontHeading, 'Orbitron', 'Courier New', monospace);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--preview-primary, #00ff88);
+      text-shadow: var(--preview-textShadow, 0 0 10px #00ff88);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .preview-body-text {
+      font-family: var(--preview-fontBody, 'Courier New', Courier, monospace);
+      font-size: 12px;
+      color: var(--preview-text, #ffffff);
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+
+    .preview-muted {
+      font-family: var(--preview-fontBody, 'Courier New', Courier, monospace);
+      font-size: 11px;
+      color: var(--preview-textMuted, #77777d);
+      margin-bottom: 14px;
+    }
+
+    .preview-btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      background: linear-gradient(135deg, var(--preview-btnStart, #00ff88), var(--preview-btnEnd, #00cc66));
+      color: #0a0a0a;
+      font-family: var(--preview-fontHeading, 'Orbitron', monospace);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+      margin-right: 8px;
+      margin-bottom: 12px;
+    }
+
+    .preview-btn:hover {
+      box-shadow: 0 0 18px rgba(0, 255, 136, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .preview-btn.accent {
+      background: linear-gradient(135deg, var(--preview-accent, #ff6b35), #cc4420);
+      box-shadow: 0 0 10px rgba(255, 107, 53, 0.4);
+    }
+
+    .preview-btn.accent:hover {
+      box-shadow: 0 0 18px rgba(255, 107, 53, 0.7);
+    }
+
+    .preview-status-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .preview-status-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--preview-textSecondary, #adadb8);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.connected {
+      background: var(--preview-connected, #00ff88);
+      box-shadow: 0 0 6px var(--preview-connected, #00ff88);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    .dot.disconnected {
+      background: var(--preview-disconnected, #ff4444);
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .preview-heatbar {
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(
+        to right,
+        var(--preview-heatInner, #ff0000),
+        var(--preview-heatMid, #ff6400),
+        var(--preview-heatOuter, #ffc800)
+      );
+      margin-top: 14px;
+      box-shadow: 0 0 8px rgba(255, 100, 0, 0.4);
+    }
+
+    .preview-heatbar-label {
+      font-size: 9px;
+      color: #77777d;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ─── Toast Notification ─────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      right: 24px;
+      z-index: 200;
+      background: #1a1a1a;
+      border: 2px solid #00ff88;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #00ff88;
+      box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      max-width: 320px;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #toast.error {
+      border-color: #ff4444;
+      color: #ff4444;
+      box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+    }
+
+    /* ─── Sticky Footer ──────────────────────────────────────── */
+    .action-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 10, 0.97);
+      border-top: 2px solid #004400;
+      backdrop-filter: blur(12px);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .footer-info {
+      margin-right: auto;
+      font-size: 11px;
+      color: #77777d;
+      letter-spacing: 0.05em;
+    }
+
+    .footer-info span {
+      color: #adadb8;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Orbitron', 'Courier New', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, #00ff88, #00cc66);
+      color: #0a0a0a;
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+    }
+
+    .btn-save:hover {
+      box-shadow: 0 0 22px rgba(0, 255, 136, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .btn-save:active {
+      transform: translateY(0);
+    }
+
+    .btn-reset {
+      background: linear-gradient(135deg, #ff6b35, #cc4420);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-reset:hover {
+      box-shadow: 0 0 22px rgba(255, 107, 53, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-reset:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ─── Loading state ──────────────────────────────────────── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(10, 10, 10, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .loading-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #00ff88;
+      text-shadow: 0 0 20px #00ff88;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      animation: pulse-glow 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse-glow {
+      from { text-shadow: 0 0 10px #00ff88; opacity: 0.7; }
+      to   { text-shadow: 0 0 30px #00ff88, 0 0 60px #00ff88; opacity: 1; }
+    }
+
+    /* ─── Utility ────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: #2a2a2a;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-text">Loading Theme...</div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- ─── Page Header ─────────────────────────────────────────── -->
+  <header class="page-header">
+    <a href="/" class="back-link">
+      <span class="back-arrow">&#8592;</span>
+      Home
+    </a>
+    <div class="page-title">
+      Theme Settings
+      <span>Heat Server Emulator &mdash; RipTheAI</span>
+    </div>
+  </header>
+
+  <!-- ─── Main Layout ─────────────────────────────────────────── -->
+  <div class="main-layout">
+
+    <!-- Settings Column -->
+    <div class="settings-column">
+
+      <!-- ── Colors Section ──────────────────────────────────── -->
+      <div class="section-panel">
+        <div class="section-header">
+          <span class="section-icon">&#9632;</span>
+          <span class="section-title">Colors</span>
+        </div>
+        <div class="section-body">
+
+          <!-- Brand Colors -->
+          <div class="color-group">
+            <div class="color-group-label">Brand Colors</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap" id="swatch-primary">
+                  <input type="color" id="color-primary" data-key="colors.primary" title="Primary Color">
+                </div>
+                <div class="color-info">
+                  <span class="color-label">Primary Color</span>
+                  <input type="text" class="color-hex-input" id="hex-primary" data-key="colors.primary" maxlength="7" placeholder="#00ff88">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap" id="swatch-accent">
+                  <input type="color" id="color-accent" data-key="colors.accent" title="Accent Color">
+                </div>
+                <div class="color-info">
+                  <span class="color-label">Accent Color</span>
+                  <input type="text" class="color-hex-input" id="hex-accent" data-key="colors.accent" maxlength="7" placeholder="#ff6b35">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backgrounds -->
+          <div class="color-group">
+            <div class="color-group-label">Backgrounds</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-background" data-key="colors.background" title="Background"></div>
+                <div class="color-info">
+                  <span class="color-label">Background</span>
+                  <input type="text" class="color-hex-input" id="hex-background" data-key="colors.background" maxlength="7" placeholder="#0a0a0a">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-surface" data-key="colors.surface" title="Surface"></div>
+                <div class="color-info">
+                  <span class="color-label">Surface</span>
+                  <input type="text" class="color-hex-input" id="hex-surface" data-key="colors.surface" maxlength="7" placeholder="#1a1a1a">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-surfaceLight" data-key="colors.surfaceLight" title="Surface Light"></div>
+                <div class="color-info">
+                  <span class="color-label">Surface Light</span>
+                  <input type="text" class="color-hex-input" id="hex-surfaceLight" data-key="colors.surfaceLight" maxlength="7" placeholder="#2a2a2a">
+                </div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <!-- Panel RGBA inputs -->
+            <div class="rgba-row">
+              <span class="rgba-label">Panel Background <em style="color:#77777d">(rgba format)</em></span>
+              <input type="text" class="rgba-input" id="rgba-panelBg" data-key="colors.panelBg" placeholder="rgba(0, 20, 0, 0.85)">
+              <div class="rgba-hint">Example: rgba(0, 20, 0, 0.85)</div>
+            </div>
+            <div class="rgba-row">
+              <span class="rgba-label">Panel Tint <em style="color:#77777d">(rgba format)</em></span>
+              <input type="text" class="rgba-input" id="rgba-panelTint" data-key="colors.panelTint" placeholder="rgba(0, 255, 136, 0.04)">
+              <div class="rgba-hint">Example: rgba(0, 255, 136, 0.04)</div>
+            </div>
+          </div>
+
+          <!-- Text -->
+          <div class="color-group">
+            <div class="color-group-label">Text</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-text" data-key="colors.text" title="Text"></div>
+                <div class="color-info">
+                  <span class="color-label">Text</span>
+                  <input type="text" class="color-hex-input" id="hex-text" data-key="colors.text" maxlength="7" placeholder="#ffffff">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-textSecondary" data-key="colors.textSecondary" title="Text Secondary"></div>
+                <div class="color-info">
+                  <span class="color-label">Text Secondary</span>
+                  <input type="text" class="color-hex-input" id="hex-textSecondary" data-key="colors.textSecondary" maxlength="7" placeholder="#adadb8">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-textMuted" data-key="colors.textMuted" title="Text Muted"></div>
+                <div class="color-info">
+                  <span class="color-label">Text Muted</span>
+                  <input type="text" class="color-hex-input" id="hex-textMuted" data-key="colors.textMuted" maxlength="7" placeholder="#77777d">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Borders -->
+          <div class="color-group">
+            <div class="color-group-label">Borders</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-border" data-key="colors.border" title="Border"></div>
+                <div class="color-info">
+                  <span class="color-label">Border</span>
+                  <input type="text" class="color-hex-input" id="hex-border" data-key="colors.border" maxlength="7" placeholder="#004400">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-borderAccent" data-key="colors.borderAccent" title="Border Accent"></div>
+                <div class="color-info">
+                  <span class="color-label">Border Accent</span>
+                  <input type="text" class="color-hex-input" id="hex-borderAccent" data-key="colors.borderAccent" maxlength="7" placeholder="#00ff88">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="color-group">
+            <div class="color-group-label">Status</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-statusConnected" data-key="colors.statusConnected" title="Status Connected"></div>
+                <div class="color-info">
+                  <span class="color-label">Connected</span>
+                  <input type="text" class="color-hex-input" id="hex-statusConnected" data-key="colors.statusConnected" maxlength="7" placeholder="#00ff88">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-statusDisconnected" data-key="colors.statusDisconnected" title="Status Disconnected"></div>
+                <div class="color-info">
+                  <span class="color-label">Disconnected</span>
+                  <input type="text" class="color-hex-input" id="hex-statusDisconnected" data-key="colors.statusDisconnected" maxlength="7" placeholder="#ff4444">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="color-group">
+            <div class="color-group-label">Buttons</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-buttonGradientStart" data-key="colors.buttonGradientStart" title="Button Gradient Start"></div>
+                <div class="color-info">
+                  <span class="color-label">Gradient Start</span>
+                  <input type="text" class="color-hex-input" id="hex-buttonGradientStart" data-key="colors.buttonGradientStart" maxlength="7" placeholder="#00ff88">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-buttonGradientEnd" data-key="colors.buttonGradientEnd" title="Button Gradient End"></div>
+                <div class="color-info">
+                  <span class="color-label">Gradient End</span>
+                  <input type="text" class="color-hex-input" id="hex-buttonGradientEnd" data-key="colors.buttonGradientEnd" maxlength="7" placeholder="#00cc66">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-buttonHover" data-key="colors.buttonHover" title="Button Hover"></div>
+                <div class="color-info">
+                  <span class="color-label">Button Hover</span>
+                  <input type="text" class="color-hex-input" id="hex-buttonHover" data-key="colors.buttonHover" maxlength="7" placeholder="#33ff99">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heatmap -->
+          <div class="color-group">
+            <div class="color-group-label">Heatmap</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-heatInner" data-key="colors.heatInner" title="Heat Inner"></div>
+                <div class="color-info">
+                  <span class="color-label">Heat Inner</span>
+                  <input type="text" class="color-hex-input" id="hex-heatInner" data-key="colors.heatInner" maxlength="7" placeholder="#ff0000">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-heatMid" data-key="colors.heatMid" title="Heat Mid"></div>
+                <div class="color-info">
+                  <span class="color-label">Heat Mid</span>
+                  <input type="text" class="color-hex-input" id="hex-heatMid" data-key="colors.heatMid" maxlength="7" placeholder="#ff6400">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-heatOuter" data-key="colors.heatOuter" title="Heat Outer"></div>
+                <div class="color-info">
+                  <span class="color-label">Heat Outer</span>
+                  <input type="text" class="color-hex-input" id="hex-heatOuter" data-key="colors.heatOuter" maxlength="7" placeholder="#ffc800">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Other -->
+          <div class="color-group">
+            <div class="color-group-label">Other</div>
+            <div class="color-row-grid">
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-markerDefault" data-key="colors.markerDefault" title="Marker Default"></div>
+                <div class="color-info">
+                  <span class="color-label">Marker Default</span>
+                  <input type="text" class="color-hex-input" id="hex-markerDefault" data-key="colors.markerDefault" maxlength="7" placeholder="#00ff88">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-scrollbarThumb" data-key="colors.scrollbarThumb" title="Scrollbar Thumb"></div>
+                <div class="color-info">
+                  <span class="color-label">Scrollbar Thumb</span>
+                  <input type="text" class="color-hex-input" id="hex-scrollbarThumb" data-key="colors.scrollbarThumb" maxlength="7" placeholder="#ea580c">
+                </div>
+              </div>
+              <div class="color-row">
+                <div class="color-swatch-wrap"><input type="color" id="color-scrollbarTrack" data-key="colors.scrollbarTrack" title="Scrollbar Track"></div>
+                <div class="color-info">
+                  <span class="color-label">Scrollbar Track</span>
+                  <input type="text" class="color-hex-input" id="hex-scrollbarTrack" data-key="colors.scrollbarTrack" maxlength="7" placeholder="#374151">
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Fonts Section ───────────────────────────────────── -->
+      <div class="section-panel">
+        <div class="section-header">
+          <span class="section-icon">&#65312;</span>
+          <span class="section-title">Typography</span>
+        </div>
+        <div class="section-body">
+          <div class="font-grid">
+            <div class="font-row">
+              <label class="font-label" for="font-heading">Heading Font</label>
+              <select id="font-heading" class="font-select" data-key="fonts.heading">
+                <option value="'Orbitron', 'Courier New', monospace">Orbitron</option>
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Segoe UI', system-ui, sans-serif">Segoe UI</option>
+                <option value="system-ui, sans-serif">System Default</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="font-row">
+              <label class="font-label" for="font-body">Body Font</label>
+              <select id="font-body" class="font-select" data-key="fonts.body">
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Orbitron', 'Courier New', monospace">Orbitron</option>
+                <option value="'Segoe UI', system-ui, sans-serif">Segoe UI</option>
+                <option value="system-ui, sans-serif">System Default</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="font-row">
+              <label class="font-label" for="font-mono">Mono Font</label>
+              <select id="font-mono" class="font-select" data-key="fonts.mono">
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Orbitron', 'Courier New', monospace">Orbitron</option>
+                <option value="'Segoe UI', system-ui, sans-serif">Segoe UI</option>
+                <option value="system-ui, sans-serif">System Default</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Effects Section ────────────────────────────────── -->
+      <div class="section-panel">
+        <div class="section-header">
+          <span class="section-icon">&#10024;</span>
+          <span class="section-title">Effects</span>
+        </div>
+        <div class="section-body">
+          <div class="effects-grid">
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <label class="slider-label" for="effect-glowIntensity">Glow Intensity</label>
+                <span class="slider-value" id="val-glowIntensity">1.0</span>
+              </div>
+              <input type="range" id="effect-glowIntensity" data-key="effects.glowIntensity"
+                     min="0" max="2" step="0.1" value="1.0">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <label class="slider-label" for="effect-borderWidth">Border Width</label>
+                <span class="slider-value" id="val-borderWidth">2<small style="font-size:9px;color:#77777d">px</small></span>
+              </div>
+              <input type="range" id="effect-borderWidth" data-key="effects.borderWidth"
+                     min="0" max="5" step="1" value="2">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <label class="slider-label" for="effect-borderRadius">Border Radius</label>
+                <span class="slider-value" id="val-borderRadius">12<small style="font-size:9px;color:#77777d">px</small></span>
+              </div>
+              <input type="range" id="effect-borderRadius" data-key="effects.borderRadius"
+                     min="0" max="24" step="2" value="12">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <label class="slider-label" for="effect-backdropBlur">Backdrop Blur</label>
+                <span class="slider-value" id="val-backdropBlur">10<small style="font-size:9px;color:#77777d">px</small></span>
+              </div>
+              <input type="range" id="effect-backdropBlur" data-key="effects.backdropBlur"
+                     min="0" max="20" step="1" value="10">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-top">
+                <label class="slider-label" for="effect-panelOpacity">Panel Opacity</label>
+                <span class="slider-value" id="val-panelOpacity">0.85</span>
+              </div>
+              <input type="range" id="effect-panelOpacity" data-key="effects.panelOpacity"
+                     min="0" max="1" step="0.05" value="0.85">
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /settings-column -->
+
+    <!-- Preview Column -->
+    <div class="preview-column">
+      <div class="preview-sticky">
+        <div class="section-panel">
+          <div class="section-header">
+            <span class="section-icon">&#9654;</span>
+            <span class="section-title">Live Preview</span>
+          </div>
+          <div class="section-body" style="padding: 14px;">
+
+            <div class="preview-card" id="previewCard">
+              <div class="preview-heading" id="previewHeading">SIGNAL ONLINE</div>
+              <div class="preview-body-text" id="previewBody">
+                Heat Server Emulator running on<br>ws://localhost:7777
+              </div>
+              <div class="preview-muted" id="previewMuted">Channel: riptheai_dev &mdash; v1.0.0</div>
+
+              <button class="preview-btn" id="previewBtnPrimary">Connect</button>
+              <button class="preview-btn accent" id="previewBtnAccent">Reset</button>
+
+              <div class="preview-status-row">
+                <div class="preview-status-dot" id="previewStatusConn">
+                  <span class="dot connected" id="previewDotConn"></span>
+                  Connected
+                </div>
+                <div class="preview-status-dot" id="previewStatusDisc">
+                  <span class="dot disconnected" id="previewDotDisc"></span>
+                  Offline
+                </div>
+              </div>
+
+              <div class="preview-heatbar" id="previewHeatbar"></div>
+              <div class="preview-heatbar-label">Heatmap gradient</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Quick info box -->
+        <div class="section-panel">
+          <div class="section-header">
+            <span class="section-icon">&#9432;</span>
+            <span class="section-title">Info</span>
+          </div>
+          <div class="section-body" style="font-size:11px; color:#77777d; line-height:1.8;">
+            <p>Changes are applied to the preview in real-time.</p>
+            <p style="margin-top:8px;">Press <span style="color:#00ff88">Save Theme</span> to persist changes to the server.</p>
+            <p style="margin-top:8px;">Press <span style="color:#ff6b35">Reset</span> to restore factory defaults.</p>
+            <p style="margin-top:8px; color:#555;">Endpoint: <span style="color:#adadb8">PUT /api/theme</span></p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /preview-column -->
+
+  </div><!-- /main-layout -->
+
+  <!-- ─── Sticky Action Footer ─────────────────────────────────── -->
+  <footer class="action-footer">
+    <div class="footer-info">
+      RipTheAI <span>Heat Server Emulator</span>
+    </div>
+    <button class="btn btn-reset" id="btnReset">&#8635; Reset to Defaults</button>
+    <button class="btn btn-save" id="btnSave">&#10003; Save Theme</button>
+  </footer>
+
+  <!-- ─── JavaScript ─────────────────────────────────────────── -->
+  <script>
+    'use strict';
+
+    // ── State ────────────────────────────────────────────────────
+    /** In-memory working copy of the theme, mutated on every input change. */
+    let theme = {
+      colors: {},
+      fonts: {},
+      effects: {}
+    };
+
+    // ── Utilities ────────────────────────────────────────────────
+
+    /**
+     * Ensure a color string starts with # for input[type=color].
+     * Returns empty string if value is not a valid 6-digit hex.
+     */
+    function toColorInputValue(hex) {
+      if (!hex) return '#000000';
+      const clean = hex.startsWith('#') ? hex : '#' + hex;
+      return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean : '#000000';
+    }
+
+    /**
+     * Normalise a hex string typed by the user:
+     * strip leading #, add # back, uppercase, validate.
+     */
+    function normaliseHex(raw) {
+      const stripped = raw.replace(/^#/, '').trim();
+      const full = stripped.length === 3
+        ? stripped.split('').map(c => c + c).join('')
+        : stripped;
+      return /^[0-9a-fA-F]{6}$/.test(full) ? '#' + full : null;
+    }
+
+    /** Parse "colors.primary" → { section: 'colors', key: 'primary' } */
+    function parseDataKey(dataKey) {
+      const parts = dataKey.split('.');
+      return { section: parts[0], key: parts[1] };
+    }
+
+    /** Safely read a nested value from the theme object */
+    function getThemeValue(dataKey) {
+      const { section, key } = parseDataKey(dataKey);
+      return (theme[section] && theme[section][key] !== undefined)
+        ? theme[section][key]
+        : null;
+    }
+
+    /** Write a value back into the theme object */
+    function setThemeValue(dataKey, value) {
+      const { section, key } = parseDataKey(dataKey);
+      if (!theme[section]) theme[section] = {};
+      theme[section][key] = value;
+    }
+
+    // ── Toast ────────────────────────────────────────────────────
+    let toastTimer = null;
+
+    function showToast(message, isError) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.className = isError ? 'error show' : 'show';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.remove('show');
+      }, 3500);
+    }
+
+    // ── Loading overlay ──────────────────────────────────────────
+    function setLoading(active) {
+      document.getElementById('loadingOverlay').classList.toggle('active', active);
+    }
+
+    // ── Preview updater ──────────────────────────────────────────
+    function updatePreview() {
+      const c = theme.colors || {};
+      const f = theme.fonts || {};
+      const e = theme.effects || {};
+
+      const card = document.getElementById('previewCard');
+      const heading = document.getElementById('previewHeading');
+      const body = document.getElementById('previewBody');
+      const muted = document.getElementById('previewMuted');
+      const btnPrimary = document.getElementById('previewBtnPrimary');
+      const btnAccent = document.getElementById('previewBtnAccent');
+      const dotConn = document.getElementById('previewDotConn');
+      const dotDisc = document.getElementById('previewDotDisc');
+      const statusConn = document.getElementById('previewStatusConn');
+      const statusDisc = document.getElementById('previewStatusDisc');
+      const heatbar = document.getElementById('previewHeatbar');
+
+      // Card appearance
+      const borderW = e.borderWidth !== undefined ? e.borderWidth : 2;
+      const borderR = e.borderRadius !== undefined ? e.borderRadius : 12;
+      const blur = e.backdropBlur !== undefined ? e.backdropBlur : 10;
+      const glow = e.glowIntensity !== undefined ? e.glowIntensity : 1;
+
+      card.style.background = c.panelBg || 'rgba(0, 20, 0, 0.85)';
+      card.style.borderWidth = borderW + 'px';
+      card.style.borderColor = c.borderAccent || '#00ff88';
+      card.style.borderRadius = borderR + 'px';
+      card.style.backdropFilter = 'blur(' + blur + 'px)';
+
+      const primary = c.primary || '#00ff88';
+      const glowBlur1 = Math.round(16 * glow);
+      const glowBlur2 = Math.round(32 * glow);
+      card.style.boxShadow =
+        '0 0 ' + glowBlur1 + 'px ' + primary + '33, ' +
+        '0 0 ' + glowBlur2 + 'px ' + primary + '22';
+
+      // Text
+      heading.style.fontFamily = f.heading || "'Orbitron', 'Courier New', monospace";
+      heading.style.color = primary;
+      heading.style.textShadow =
+        '0 0 ' + glowBlur1 + 'px ' + primary + ', ' +
+        '0 0 ' + glowBlur2 + 'px ' + primary;
+
+      body.style.fontFamily = f.body || "'Courier New', Courier, monospace";
+      body.style.color = c.text || '#ffffff';
+
+      muted.style.fontFamily = f.body || "'Courier New', Courier, monospace";
+      muted.style.color = c.textMuted || '#77777d';
+
+      // Buttons
+      const btnStart = c.buttonGradientStart || '#00ff88';
+      const btnEnd = c.buttonGradientEnd || '#00cc66';
+      btnPrimary.style.background = 'linear-gradient(135deg, ' + btnStart + ', ' + btnEnd + ')';
+      btnPrimary.style.fontFamily = f.heading || "'Orbitron', 'Courier New', monospace";
+
+      const accent = c.accent || '#ff6b35';
+      btnAccent.style.background = 'linear-gradient(135deg, ' + accent + ', #cc4420)';
+      btnAccent.style.fontFamily = f.heading || "'Orbitron', 'Courier New', monospace";
+
+      // Status dots
+      const connected = c.statusConnected || '#00ff88';
+      const disconnected = c.statusDisconnected || '#ff4444';
+      dotConn.style.background = connected;
+      dotConn.style.boxShadow = '0 0 6px ' + connected;
+      dotDisc.style.background = disconnected;
+      statusConn.style.color = c.textSecondary || '#adadb8';
+      statusDisc.style.color = c.textSecondary || '#adadb8';
+
+      // Heatmap bar
+      const hi = c.heatInner || '#ff0000';
+      const hm = c.heatMid || '#ff6400';
+      const ho = c.heatOuter || '#ffc800';
+      heatbar.style.background = 'linear-gradient(to right, ' + hi + ', ' + hm + ', ' + ho + ')';
+    }
+
+    // ── Build track fill for range sliders ───────────────────────
+    function updateSliderTrack(input) {
+      const min = parseFloat(input.min);
+      const max = parseFloat(input.max);
+      const val = parseFloat(input.value);
+      const pct = ((val - min) / (max - min)) * 100;
+      input.style.background =
+        'linear-gradient(to right, #00ff88 0%, #00ff88 ' + pct + '%, #2a2a2a ' + pct + '%, #2a2a2a 100%)';
+    }
+
+    // ── Sync all inputs from the theme object ────────────────────
+    function populateInputs() {
+      // Hex color pickers + text inputs
+      document.querySelectorAll('input[type="color"][data-key]').forEach(picker => {
+        const val = getThemeValue(picker.dataset.key);
+        if (val) {
+          picker.value = toColorInputValue(val);
+          // Sync swatch background
+          picker.parentElement.style.background = val;
+        }
+      });
+
+      document.querySelectorAll('input.color-hex-input[data-key]').forEach(input => {
+        const val = getThemeValue(input.dataset.key);
+        if (val) input.value = val;
+      });
+
+      // RGBA text inputs
+      document.querySelectorAll('input.rgba-input[data-key]').forEach(input => {
+        const val = getThemeValue(input.dataset.key);
+        if (val) input.value = val;
+      });
+
+      // Font selects
+      document.querySelectorAll('select[data-key]').forEach(select => {
+        const val = getThemeValue(select.dataset.key);
+        if (val) {
+          // Try to find exact match first, then closest
+          let found = false;
+          for (const opt of select.options) {
+            if (opt.value === val) {
+              select.value = val;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            // If no exact match, leave at default
+            select.value = select.options[0].value;
+          }
+        }
+      });
+
+      // Sliders
+      document.querySelectorAll('input[type="range"][data-key]').forEach(slider => {
+        const val = getThemeValue(slider.dataset.key);
+        if (val !== null) {
+          slider.value = val;
+          const labelKey = slider.dataset.key.split('.')[1];
+          const display = document.getElementById('val-' + labelKey);
+          if (display) {
+            display.childNodes[0].textContent = parseFloat(val).toString();
+          }
+          updateSliderTrack(slider);
+        }
+      });
+    }
+
+    // ── Wire up all inputs ───────────────────────────────────────
+    function bindInputs() {
+
+      // Color picker → update hex text + theme + preview
+      document.querySelectorAll('input[type="color"][data-key]').forEach(picker => {
+        picker.addEventListener('input', function () {
+          const hex = this.value;
+          const key = this.dataset.key;
+          setThemeValue(key, hex);
+          // Sync swatch bg
+          this.parentElement.style.background = hex;
+          // Sync corresponding text input
+          const inputKey = key.split('.')[1];
+          const hexInput = document.getElementById('hex-' + inputKey);
+          if (hexInput) hexInput.value = hex;
+          updatePreview();
+        });
+      });
+
+      // Hex text input → update color picker + theme + preview
+      document.querySelectorAll('input.color-hex-input[data-key]').forEach(input => {
+        input.addEventListener('input', function () {
+          const normalised = normaliseHex(this.value);
+          if (!normalised) return; // not yet a full hex, wait
+          const key = this.dataset.key;
+          setThemeValue(key, normalised);
+          // Sync picker
+          const inputKey = key.split('.')[1];
+          const picker = document.getElementById('color-' + inputKey);
+          if (picker) {
+            picker.value = normalised;
+            picker.parentElement.style.background = normalised;
+          }
+          updatePreview();
+        });
+
+        // On blur, clean up partial input
+        input.addEventListener('blur', function () {
+          const normalised = normaliseHex(this.value);
+          if (normalised) {
+            this.value = normalised;
+          } else {
+            // Restore from theme state
+            const current = getThemeValue(this.dataset.key);
+            if (current) this.value = current;
+          }
+        });
+      });
+
+      // RGBA text inputs → update theme + preview
+      document.querySelectorAll('input.rgba-input[data-key]').forEach(input => {
+        input.addEventListener('input', function () {
+          setThemeValue(this.dataset.key, this.value.trim());
+          updatePreview();
+        });
+      });
+
+      // Font selects
+      document.querySelectorAll('select[data-key]').forEach(select => {
+        select.addEventListener('change', function () {
+          setThemeValue(this.dataset.key, this.value);
+          updatePreview();
+        });
+      });
+
+      // Range sliders
+      document.querySelectorAll('input[type="range"][data-key]').forEach(slider => {
+        slider.addEventListener('input', function () {
+          const val = parseFloat(this.value);
+          setThemeValue(this.dataset.key, val);
+          const labelKey = this.dataset.key.split('.')[1];
+          const display = document.getElementById('val-' + labelKey);
+          if (display) {
+            display.childNodes[0].textContent = val.toString();
+          }
+          updateSliderTrack(this);
+          updatePreview();
+        });
+      });
+    }
+
+    // ── Fetch current theme from server ─────────────────────────
+    async function loadTheme() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/theme');
+        if (!res.ok) throw new Error('Server returned HTTP ' + res.status);
+        const data = await res.json();
+
+        // Merge into local state
+        theme.colors = Object.assign({}, data.colors || {});
+        theme.fonts = Object.assign({}, data.fonts || {});
+        theme.effects = Object.assign({}, data.effects || {});
+
+        populateInputs();
+        updatePreview();
+      } catch (err) {
+        console.error('[settings] Failed to load theme:', err);
+        showToast('Could not load theme from server', true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ── Save theme to server ─────────────────────────────────────
+    async function saveTheme() {
+      const btnSave = document.getElementById('btnSave');
+      btnSave.disabled = true;
+      btnSave.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(theme)
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error('HTTP ' + res.status + ': ' + errText);
+        }
+        showToast('Theme saved successfully', false);
+      } catch (err) {
+        console.error('[settings] Failed to save theme:', err);
+        showToast('Save failed: ' + err.message, true);
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = '\u2713 Save Theme';
+      }
+    }
+
+    // ── Reset theme to server defaults ───────────────────────────
+    async function resetTheme() {
+      const btnReset = document.getElementById('btnReset');
+      btnReset.disabled = true;
+      btnReset.textContent = 'Resetting...';
+
+      try {
+        const res = await fetch('/api/theme/reset', { method: 'POST' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        showToast('Theme reset to defaults', false);
+        // Reload from server
+        await loadTheme();
+      } catch (err) {
+        console.error('[settings] Failed to reset theme:', err);
+        showToast('Reset failed: ' + err.message, true);
+      } finally {
+        btnReset.disabled = false;
+        btnReset.textContent = '\u8635 Reset to Defaults';
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      bindInputs();
+
+      // Initialise slider tracks
+      document.querySelectorAll('input[type="range"]').forEach(updateSliderTrack);
+
+      // Wire action buttons
+      document.getElementById('btnSave').addEventListener('click', saveTheme);
+      document.getElementById('btnReset').addEventListener('click', function () {
+        if (confirm('Reset all theme settings to factory defaults? This cannot be undone.')) {
+          resetTheme();
+        }
+      });
+
+      // Load theme from server
+      loadTheme();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,17 +1,20 @@
-import { createServer } from 'http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { readFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { config } from './config.js';
+import { ThemeManager } from './theme-manager.js';
 
 /**
- * Simple HTTP server for serving demo pages
+ * HTTP server for serving demo pages and theme API
  */
 export class HttpServer {
   private server;
   private publicDir: string;
+  private themeManager: ThemeManager;
 
   constructor(publicDir: string = './public') {
     this.publicDir = publicDir;
+    this.themeManager = new ThemeManager();
     this.server = createServer(this.handleRequest.bind(this));
   }
 
@@ -27,13 +30,105 @@ export class HttpServer {
   /**
    * Handle HTTP request
    */
-  private async handleRequest(req: any, res: any): Promise<void> {
+  private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const url = (req.url || '/').split('?')[0];
+
+    // CORS headers for API
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // Theme API routes
+    if (url === '/api/theme') {
+      await this.handleThemeAPI(req, res);
+      return;
+    }
+    if (url === '/api/theme/reset') {
+      await this.handleThemeReset(req, res);
+      return;
+    }
+
+    // Static file serving
+    await this.serveStatic(url, res);
+  }
+
+  /**
+   * GET /api/theme — return current theme
+   * PUT /api/theme — partial update
+   */
+  private async handleThemeAPI(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
-      let filePath = req.url === '/' ? '/index.html' : req.url;
-      
-      // Remove query string
-      filePath = filePath.split('?')[0];
-      
+      if (req.method === 'GET') {
+        const theme = await this.themeManager.get();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(theme));
+        return;
+      }
+
+      if (req.method === 'PUT') {
+        const body = await this.readBody(req);
+        const partial = JSON.parse(body);
+        const updated = await this.themeManager.update(partial);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(updated));
+        return;
+      }
+
+      res.writeHead(405);
+      res.end('Method Not Allowed');
+    } catch (error: any) {
+      console.error('[Theme API Error]', error.message);
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+  }
+
+  /**
+   * POST /api/theme/reset — restore defaults
+   */
+  private async handleThemeReset(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      res.writeHead(405);
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    try {
+      const defaults = await this.themeManager.reset();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(defaults));
+    } catch (error: any) {
+      console.error('[Theme Reset Error]', error.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+  }
+
+  /**
+   * Read request body as string
+   */
+  private readBody(req: IncomingMessage): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk: Buffer) => chunks.push(chunk));
+      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+      req.on('error', reject);
+    });
+  }
+
+  /**
+   * Serve static files from public directory
+   */
+  private async serveStatic(url: string, res: ServerResponse): Promise<void> {
+    try {
+      let filePath = url === '/' ? '/index.html' : url;
+
       // Security: prevent directory traversal
       if (filePath.includes('..')) {
         res.writeHead(403);
@@ -43,14 +138,13 @@ export class HttpServer {
 
       const fullPath = join(process.cwd(), this.publicDir, filePath);
       const content = await readFile(fullPath);
-      
-      // Set content type
+
       const ext = extname(filePath);
       const contentType = this.getContentType(ext);
-      
+
       res.writeHead(200, { 'Content-Type': contentType });
       res.end(content);
-      
+
     } catch (error: any) {
       if (error.code === 'ENOENT') {
         res.writeHead(404);
@@ -75,6 +169,9 @@ export class HttpServer {
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
       '.svg': 'image/svg+xml',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
     };
     return types[ext] || 'text/plain';
   }
