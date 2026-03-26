@@ -17,9 +17,164 @@ export interface HeatSystemMessage {
 }
 
 /**
+ * Identity resolution response for a viewer
+ */
+export interface IdentityResponse {
+  resolved: boolean;
+  userId: string;
+  displayName: string;
+  profileImageUrl: string | null;
+  color: string;
+  tier: 'verified' | 'unverified' | 'anonymous';
+  friendshipLevel: number;
+}
+
+/**
+ * Click data enriched with resolved identity
+ */
+export interface EnrichedClickData extends HeatClickData {
+  identity: IdentityResponse;
+}
+
+/**
+ * Presence message: a viewer has joined the overlay
+ */
+export interface PresenceJoinMessage {
+  type: 'presence_join';
+  userId: string;
+  status: 'present' | 'lurking';
+  identity: IdentityResponse;
+}
+
+/**
+ * Presence message: a viewer's status has changed
+ */
+export interface PresenceUpdateMessage {
+  type: 'presence_update';
+  userId: string;
+  status: 'present' | 'lurking';
+  identity: IdentityResponse;
+}
+
+/**
+ * Presence message: full snapshot of current members
+ */
+export interface PresenceStateMessage {
+  type: 'presence_state';
+  members: Array<{
+    userId: string;
+    status: 'present' | 'lurking';
+    identity: IdentityResponse;
+  }>;
+}
+
+/**
+ * HeatVote message: a vote session has started
+ */
+export interface HeatVoteStartMessage {
+  type: 'heatvote_start';
+  question: string;
+  options: string[];
+  layout: 'split2' | 'split3' | 'quadrant' | 'custom';
+}
+
+/**
+ * HeatVote message: a viewer has cast a vote
+ */
+export interface HeatVoteCastMessage {
+  type: 'heatvote_cast';
+  userId: string;
+  option: number;
+  identity: IdentityResponse;
+}
+
+/**
+ * HeatVote message: updated vote tallies
+ */
+export interface HeatVoteUpdateMessage {
+  type: 'heatvote_update';
+  tallies: number[];
+  total: number;
+}
+
+/**
+ * HeatVote message: the vote session has ended
+ */
+export interface HeatVoteEndMessage {
+  type: 'heatvote_end';
+  winner: number;
+  tallies: number[];
+  question: string;
+}
+
+/**
+ * Game message: a game session has started
+ */
+export interface GameStartMessage {
+  type: 'game_start';
+  game: string;
+  players: string[];
+}
+
+/**
+ * Game message: a player has made a move
+ */
+export interface GameMoveMessage {
+  type: 'game_move';
+  game: string;
+  userId: string;
+  column: number;
+}
+
+/**
+ * Game message: current board state
+ */
+export interface GameStateMessage {
+  type: 'game_state';
+  game: string;
+  board: number[][];
+  turn: string;
+}
+
+/**
+ * Game message: the game has ended
+ */
+export interface GameEndMessage {
+  type: 'game_end';
+  game: string;
+  winner: string | null;
+}
+
+/**
  * Union type for all Heat messages
  */
-export type HeatMessage = HeatClickData | HeatSystemMessage;
+export type HeatMessage =
+  | HeatClickData
+  | EnrichedClickData
+  | HeatSystemMessage
+  | PresenceJoinMessage
+  | PresenceUpdateMessage
+  | PresenceStateMessage
+  | HeatVoteStartMessage
+  | HeatVoteCastMessage
+  | HeatVoteUpdateMessage
+  | HeatVoteEndMessage
+  | GameStartMessage
+  | GameMoveMessage
+  | GameStateMessage
+  | GameEndMessage;
+
+/**
+ * Viewer profile for display in overlays
+ */
+export interface ViewerProfile {
+  userId: string;
+  displayName: string;
+  profileImageUrl: string;
+  color: string;
+  friendshipLevel: number;
+  bio: string;
+}
 
 /**
  * Client connection info
