@@ -61,7 +61,7 @@ The Twitch Heat extension sends click events with user IDs using three formats:
 
 ### RipV2 Implementation (production)
 - Modify `heatMapService.ts` to resolve identity on click:
-  - Numeric IDs → `@twurple` Twitch API `getUsers()` with LRU cache (TTL 5min, max 500)
+  - Numeric IDs → `@twurple` Twitch API `getUsers()` with existing LRU cache (currently 5000 entries, 1hr TTL in heatMapService.ts — keep those values)
   - `U`-prefix → unverified profile with consistent color derived from token hash
   - `A`-prefix → anonymous profile
 - Enrich verified users with chatter profile data from bot's database (friendship level, conversation history)
@@ -254,6 +254,7 @@ Editable from `/settings.html` alongside theme colors/fonts.
 
 **RipV2:** Stored in bot config / dashboard setting. Changeable via dashboard UI or chat command:
 `!roomname Club Rotic` (mod/streamer only)
+Register in CommandRegistry alongside PresenceCommand in Sprint 5.
 
 **Examples:** "Champagne Room" (weekday default), "Club Rotic" (weekend vibe), "The War Room" (competitive game night), "The Chill Zone" (just chatting)
 
