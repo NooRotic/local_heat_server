@@ -1,0 +1,68 @@
+{
+  "viewers": [
+    {
+      "userId": "12345678",
+      "displayName": "CoolViewer42",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-1.png",
+      "color": "#ff6b35",
+      "friendshipLevel": 3,
+      "bio": "Regular viewer, loves fighting games"
+    },
+    {
+      "userId": "23456789",
+      "displayName": "RaidBoss99",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-2.png",
+      "color": "#9147ff",
+      "friendshipLevel": 5,
+      "bio": "Raid leader, always brings the squad"
+    },
+    {
+      "userId": "34567890",
+      "displayName": "SilentSam",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-3.png",
+      "color": "#00ff88",
+      "friendshipLevel": 1,
+      "bio": "Lurker who occasionally types"
+    },
+    {
+      "userId": "45678901",
+      "displayName": "PixelQueen",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-4.png",
+      "color": "#ff69b4",
+      "friendshipLevel": 4,
+      "bio": "Artist and emote creator"
+    },
+    {
+      "userId": "56789012",
+      "displayName": "CodeMonkey_Dev",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-5.png",
+      "color": "#1e90ff",
+      "friendshipLevel": 2,
+      "bio": "Backseat coder, always has opinions"
+    },
+    {
+      "userId": "67890123",
+      "displayName": "NightOwl_TV",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-6.png",
+      "color": "#ffd700",
+      "friendshipLevel": 3,
+      "bio": "Late night regular, never misses a stream"
+    },
+    {
+      "userId": "78901234",
+      "displayName": "TurboGamer",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-7.png",
+      "color": "#ff4444",
+      "friendshipLevel": 2,
+      "bio": "Competitive player, loves chat games"
+    },
+    {
+      "userId": "89012345",
+      "displayName": "ChillVibes420",
+      "profileImageUrl": "https://static-cdn.jtvnw.net/jtv_user_pictures/placeholder-8.png",
+      "color": "#00bcd4",
+      "friendshipLevel": 1,
+      "bio": "Just here for the vibes"
+    }
+  ]
+}

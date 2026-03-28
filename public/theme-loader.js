@@ -35,6 +35,13 @@
         root.style.setProperty('--effect-' + camelToDash(key), value + unit);
       }
     }
+
+    // Room config
+    if (theme.room) {
+      for (const [key, value] of Object.entries(theme.room)) {
+        root.style.setProperty('--room-' + camelToDash(key), value);
+      }
+    }
   }
 
   /** Convert camelCase to dash-case */
@@ -85,6 +92,7 @@
           body: "'Courier New', Courier, monospace",
         },
         effects: { glowIntensity: 1, borderWidth: 2, borderRadius: 12, backdropBlur: 10 },
+        room: { name: 'Champagne Room' },
       };
     }
 
