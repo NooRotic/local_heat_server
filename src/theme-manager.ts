@@ -8,6 +8,7 @@ export interface ThemeConfig {
   colors: Record<string, string>;
   fonts: Record<string, string>;
   effects: Record<string, number>;
+  room: Record<string, string>;
 }
 
 const THEME_PATH = join(process.cwd(), 'theme.json');
@@ -50,6 +51,9 @@ const DEFAULTS: ThemeConfig = {
     borderRadius: 12,
     backdropBlur: 10,
     panelOpacity: 0.85,
+  },
+  room: {
+    name: 'Champagne Room',
   },
 };
 
