@@ -3,7 +3,8 @@ import { createServer } from 'http';
 import { config } from './config.js';
 import { ChannelManager } from './channels.js';
 import { HttpServer } from './http-server.js';
-import type { HeatClickData, HeatSystemMessage, ClientConnection } from './types.js';
+import type { HeatClickData, HeatSystemMessage, EnrichedClickData, ClientConnection } from './types.js';
+import { IdentityResolver } from './identity.js';
 
 /**
  * Heat API Server Emulator
@@ -18,10 +19,13 @@ class HeatServer {
   private httpServer: HttpServer;
   private channelManager: ChannelManager;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private identityResolver: IdentityResolver;
 
   constructor() {
     this.channelManager = new ChannelManager();
-    
+    this.identityResolver = new IdentityResolver();
+    this.identityResolver.load();
+
     // Create HTTP server for serving demo pages
     this.httpServer = new HttpServer('./public');
     
@@ -106,8 +110,8 @@ class HeatServer {
       ws.send(JSON.stringify(welcomeMessage));
 
       // Handle incoming messages
-      ws.on('message', (data) => {
-        this.handleMessage(client, data.toString());
+      ws.on('message', async (data) => {
+        await this.handleMessage(client, data.toString());
       });
 
       // Handle disconnect
@@ -130,16 +134,16 @@ class HeatServer {
   /**
    * Handle incoming WebSocket message
    */
-  private handleMessage(client: ClientConnection, data: string): void {
+  private async handleMessage(client: ClientConnection, data: string): Promise<void> {
     try {
       const message = JSON.parse(data);
-      
+
       // Update last activity
       client.lastActivity = Date.now();
 
       // Validate message type
       if (message.type === 'click') {
-        this.handleClickMessage(client, message as HeatClickData);
+        await this.handleClickMessage(client, message as HeatClickData);
       } else {
         this.log(`⚠️ Unknown message type from ${client.userId}: ${message.type}`);
       }
@@ -151,7 +155,7 @@ class HeatServer {
   /**
    * Handle click message
    */
-  private handleClickMessage(client: ClientConnection, message: HeatClickData): void {
+  private async handleClickMessage(client: ClientConnection, message: HeatClickData): Promise<void> {
     // Validate coordinates
     const x = parseFloat(message.x);
     const y = parseFloat(message.y);
@@ -166,17 +170,27 @@ class HeatServer {
       message.id = client.userId;
     }
 
+    // Resolve identity
+    const identity = await this.identityResolver.resolve(message.id);
+
+    // Build enriched message
+    const enriched: EnrichedClickData = {
+      ...message,
+      identity,
+    };
+
     // Increment click counter
     this.channelManager.incrementClicks(client.channelId);
 
-    // Broadcast to all clients in channel (including sender for consistency)
+    // Broadcast enriched click to all clients in channel
     this.channelManager.broadcast(
       client.channelId,
-      JSON.stringify(message)
+      JSON.stringify(enriched)
     );
 
     if (config.debugMode) {
-      this.log(`🖱️ Click from ${message.id} at (${message.x}, ${message.y}) in channel ${client.channelId}`);
+      const name = identity.resolved ? identity.displayName : identity.tier;
+      this.log(`🖱️ Click from ${name} (${message.id}) at (${message.x}, ${message.y}) in channel ${client.channelId}`);
     }
   }
 
