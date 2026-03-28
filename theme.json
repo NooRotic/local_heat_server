@@ -1,6 +1,6 @@
 {
   "colors": {
-    "primary": "#00ff88",
+    "primary": "#9a04ae",
     "accent": "#ff6b35",
     "background": "#0a0a0a",
     "surface": "#1a1a1a",
@@ -8,15 +8,15 @@
     "panelBg": "rgba(0, 20, 0, 0.85)",
     "panelTint": "rgba(0, 255, 136, 0.04)",
     "border": "#004400",
-    "borderAccent": "#00ff88",
+    "borderAccent": "#ff00c8",
     "text": "#ffffff",
     "textSecondary": "#adadb8",
     "textMuted": "#77777d",
     "statusConnected": "#00ff88",
     "statusDisconnected": "#ff4444",
-    "buttonGradientStart": "#00ff88",
-    "buttonGradientEnd": "#00cc66",
-    "buttonHover": "#33ff99",
+    "buttonGradientStart": "#ff006f",
+    "buttonGradientEnd": "#ea3370",
+    "buttonHover": "#ff7033",
     "heatInner": "#ff0000",
     "heatMid": "#ff6400",
     "heatOuter": "#ffc800",
@@ -25,15 +25,15 @@
     "scrollbarTrack": "#374151"
   },
   "fonts": {
-    "heading": "'Orbitron', 'Courier New', monospace",
+    "heading": "monospace",
     "body": "'Courier New', Courier, monospace",
     "mono": "'Courier New', Courier, monospace"
   },
   "effects": {
-    "glowIntensity": 1.0,
-    "borderWidth": 2,
-    "borderRadius": 12,
-    "backdropBlur": 10,
-    "panelOpacity": 0.85
+    "glowIntensity": 1.8,
+    "borderWidth": 5,
+    "borderRadius": 22,
+    "backdropBlur": 7,
+    "panelOpacity": 0.6
   }
 }
