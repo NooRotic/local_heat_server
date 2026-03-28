@@ -995,6 +995,23 @@
         </div>
       </div>
 
+      <!-- ── Room Section ─────────────────────────────────────── -->
+      <div class="section-panel">
+        <div class="section-header">
+          <span class="section-icon">&#127942;</span>
+          <span class="section-title">Room</span>
+        </div>
+        <div class="section-body">
+          <div class="font-row">
+            <label class="font-label" for="room-name">Room Name</label>
+            <input type="text" id="room-name" class="font-select" style="font-family: 'Courier New', Courier, monospace; background: #2a2a2a; color: #ffffff; border: 1px solid #004400; border-radius: 6px; padding: 8px 12px; font-size: 13px; width: 100%;" value="Champagne Room" />
+          </div>
+          <p style="font-size: 11px; color: #77777d; margin-top: 8px; line-height: 1.6;">
+            The public name for the presence board (e.g., Champagne Room, Club Rotic)
+          </p>
+        </div>
+      </div>
+
       <!-- ── Fonts Section ───────────────────────────────────── -->
       <div class="section-panel">
         <div class="section-header">
@@ -1172,7 +1189,8 @@
     let theme = {
       colors: {},
       fonts: {},
-      effects: {}
+      effects: {},
+      room: {}
     };
 
     // ── Utilities ────────────────────────────────────────────────
@@ -1461,6 +1479,12 @@
           updatePreview();
         });
       });
+
+      // Room name input
+      document.getElementById('room-name').addEventListener('input', function () {
+        if (!theme.room) theme.room = {};
+        theme.room.name = this.value || 'Champagne Room';
+      });
     }
 
     // ── Fetch current theme from server ─────────────────────────
@@ -1475,9 +1499,13 @@
         theme.colors = Object.assign({}, data.colors || {});
         theme.fonts = Object.assign({}, data.fonts || {});
         theme.effects = Object.assign({}, data.effects || {});
+        theme.room = Object.assign({}, data.room || { name: 'Champagne Room' });
 
         populateInputs();
         updatePreview();
+
+        // Populate room name
+        document.getElementById('room-name').value = theme.room.name || 'Champagne Room';
       } catch (err) {
         console.error('[settings] Failed to load theme:', err);
         showToast('Could not load theme from server', true);
