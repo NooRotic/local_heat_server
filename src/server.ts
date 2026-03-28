@@ -5,6 +5,7 @@ import { ChannelManager } from './channels.js';
 import { HttpServer } from './http-server.js';
 import type { HeatClickData, HeatSystemMessage, EnrichedClickData, ClientConnection } from './types.js';
 import { IdentityResolver } from './identity.js';
+import { PresenceManager } from './presence.js';
 
 /**
  * Heat API Server Emulator
@@ -20,6 +21,7 @@ class HeatServer {
   private channelManager: ChannelManager;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private identityResolver: IdentityResolver;
+  private presenceManager: PresenceManager;
 
   constructor() {
     this.channelManager = new ChannelManager();
@@ -28,8 +30,10 @@ class HeatServer {
     this.identityResolver = new IdentityResolver();
     this.identityResolver.load();
 
-    // Create HTTP server for serving demo pages + API (share identity resolver)
-    this.httpServer = new HttpServer('./public', this.identityResolver);
+    this.presenceManager = new PresenceManager();
+
+    // Create HTTP server for serving demo pages + API (share identity resolver + presence)
+    this.httpServer = new HttpServer('./public', this.identityResolver, this.presenceManager);
     
     // Create HTTP server for WebSocket upgrade
     const server = createServer();
@@ -111,6 +115,12 @@ class HeatServer {
       };
       ws.send(JSON.stringify(welcomeMessage));
 
+      // Hydrate new client with current presence state
+      const presenceState = this.presenceManager.getState();
+      if (presenceState.members.length > 0) {
+        ws.send(JSON.stringify(presenceState));
+      }
+
       // Handle incoming messages
       ws.on('message', async (data) => {
         await this.handleMessage(client, data.toString());
@@ -146,6 +156,10 @@ class HeatServer {
       // Validate message type
       if (message.type === 'click') {
         await this.handleClickMessage(client, message as HeatClickData);
+      } else if (message.type === 'presence_join') {
+        await this.handlePresenceJoin(client, message);
+      } else if (message.type === 'chat') {
+        await this.handleSimulatedChat(client, message);
       } else {
         this.log(`⚠️ Unknown message type from ${client.userId}: ${message.type}`);
       }
@@ -193,6 +207,87 @@ class HeatServer {
     if (config.debugMode) {
       const name = identity.resolved ? identity.displayName : identity.tier;
       this.log(`🖱️ Click from ${name} (${message.id}) at (${message.x}, ${message.y}) in channel ${client.channelId}`);
+    }
+  }
+
+  /**
+   * Handle presence join/update from client
+   */
+  private async handlePresenceJoin(
+    client: ClientConnection,
+    message: { userId?: string; status: 'present' | 'lurking' }
+  ): Promise<void> {
+    const userId = message.userId || client.userId;
+    const identity = await this.identityResolver.resolve(userId);
+    const result = this.presenceManager.join(userId, message.status, identity);
+
+    // Broadcast presence change to all clients in channel
+    this.channelManager.broadcast(
+      client.channelId,
+      JSON.stringify(result.message)
+    );
+
+    // Broadcast announcement as system message
+    const announcement: HeatSystemMessage = {
+      type: 'system',
+      message: result.announcement,
+    };
+    this.channelManager.broadcast(client.channelId, JSON.stringify(announcement));
+
+    this.log(`🏛️ ${identity.displayName} ${result.isNew ? 'joined' : 'updated'} → ${message.status}`);
+  }
+
+  /**
+   * Handle simulated chat message (LHS testing only).
+   * If sender is a lurking member, auto-escalate to present.
+   * If sender is not a member, log the invite scenario.
+   */
+  private async handleSimulatedChat(
+    client: ClientConnection,
+    message: { userId?: string; text: string }
+  ): Promise<void> {
+    const userId = message.userId || client.userId;
+    const text = (message.text || '').trim().toLowerCase();
+
+    // Check for presence commands
+    const PRESENT_TRIGGERS = new Set(['present', '!present', 'present!']);
+    const LURK_TRIGGERS = new Set(['lurk', '!lurk', 'lurk!']);
+
+    if (PRESENT_TRIGGERS.has(text) || LURK_TRIGGERS.has(text)) {
+      const status = PRESENT_TRIGGERS.has(text) ? 'present' as const : 'lurking' as const;
+      const identity = await this.identityResolver.resolve(userId);
+      const result = this.presenceManager.join(userId, status, identity);
+
+      this.channelManager.broadcast(client.channelId, JSON.stringify(result.message));
+      const announcement: HeatSystemMessage = { type: 'system', message: result.announcement };
+      this.channelManager.broadcast(client.channelId, JSON.stringify(announcement));
+
+      this.log(`💬 ${identity.displayName} used chat command → ${status}`);
+      return;
+    }
+
+    if (text === '!status') {
+      const member = this.presenceManager.getMember(userId);
+      const statusMsg: HeatSystemMessage = {
+        type: 'system',
+        message: member
+          ? `You are currently ${member.status} in the ${this.presenceManager.getRoomName()}`
+          : `You haven't joined the ${this.presenceManager.getRoomName()} yet. Click the bullseye or type !present`,
+      };
+      client.ws.send(JSON.stringify(statusMsg));
+      return;
+    }
+
+    // Regular chat message — check for lurker escalation
+    const escalation = this.presenceManager.chatEscalate(userId);
+    if (escalation) {
+      this.channelManager.broadcast(client.channelId, JSON.stringify(escalation.message));
+      const announcement: HeatSystemMessage = { type: 'system', message: escalation.announcement };
+      this.channelManager.broadcast(client.channelId, JSON.stringify(announcement));
+      this.log(`💬 Chat auto-escalated ${userId} from lurking → present`);
+    } else if (!this.presenceManager.isMember(userId)) {
+      const identity = await this.identityResolver.resolve(userId);
+      this.log(`💬 ${identity.displayName} chatted but isn't in the ${this.presenceManager.getRoomName()} — would send AI invite in production`);
     }
   }
 
