@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { config } from './config.js';
 import { ThemeManager } from './theme-manager.js';
+import { IdentityResolver } from './identity.js';
 
 /**
  * HTTP server for serving demo pages and theme API
@@ -11,10 +12,12 @@ export class HttpServer {
   private server;
   private publicDir: string;
   private themeManager: ThemeManager;
+  private identityResolver: IdentityResolver;
 
-  constructor(publicDir: string = './public') {
+  constructor(publicDir: string = './public', identityResolver?: IdentityResolver) {
     this.publicDir = publicDir;
     this.themeManager = new ThemeManager();
+    this.identityResolver = identityResolver || new IdentityResolver();
     this.server = createServer(this.handleRequest.bind(this));
   }
 
@@ -54,8 +57,42 @@ export class HttpServer {
       return;
     }
 
+    // Identity API routes
+    const identityMatch = url.match(/^\/api\/identity\/(.+)$/);
+    if (identityMatch) {
+      await this.handleIdentityLookup(identityMatch[1], res);
+      return;
+    }
+    if (url === '/api/viewers') {
+      await this.handleViewersList(res);
+      return;
+    }
+
     // Static file serving
     await this.serveStatic(url, res);
+  }
+
+  /**
+   * GET /api/identity/:userId — resolve a user ID to identity
+   */
+  private async handleIdentityLookup(userId: string, res: ServerResponse): Promise<void> {
+    try {
+      const identity = await this.identityResolver.resolve(decodeURIComponent(userId));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(identity));
+    } catch (error: any) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+  }
+
+  /**
+   * GET /api/viewers — list all registered test viewers
+   */
+  private async handleViewersList(res: ServerResponse): Promise<void> {
+    const viewers = this.identityResolver.getViewers();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ viewers }));
   }
 
   /**

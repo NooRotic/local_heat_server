@@ -23,11 +23,13 @@ class HeatServer {
 
   constructor() {
     this.channelManager = new ChannelManager();
+
+    // Identity resolver — must init before HttpServer so it can be shared
     this.identityResolver = new IdentityResolver();
     this.identityResolver.load();
 
-    // Create HTTP server for serving demo pages
-    this.httpServer = new HttpServer('./public');
+    // Create HTTP server for serving demo pages + API (share identity resolver)
+    this.httpServer = new HttpServer('./public', this.identityResolver);
     
     // Create HTTP server for WebSocket upgrade
     const server = createServer();
