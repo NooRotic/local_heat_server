@@ -157,6 +157,56 @@ export interface GameEndMessage {
 }
 
 /**
+ * Normalized bounding box (0.0 to 1.0 in both dimensions)
+ */
+export interface NormalizedBounds {
+  x: number;       // Top-left x
+  y: number;       // Top-left y
+  width: number;
+  height: number;
+}
+
+/**
+ * A clickable target registered with the server.
+ * Decoupled from OBS (no scene/source dependency) — bounds are the source of truth.
+ * Metadata can carry OBS-specific fields for production integration.
+ */
+export interface ClickTarget {
+  name: string;              // Unique identifier (used in URLs + messages)
+  displayName: string;       // Human-friendly label
+  bounds: NormalizedBounds;  // Normalized 0-1 hit zone
+  enabled: boolean;
+  metadata?: Record<string, unknown>;  // User-defined (sourceName, sceneName, color, etc.)
+}
+
+/**
+ * Result of testing a click against a target.
+ * Only returned when the click lands inside the target's bounds.
+ */
+export interface HitTestResult {
+  targetName: string;
+  targetDisplayName: string;
+  // Click position relative to target (0-1 within bounds)
+  relativeX: number;
+  relativeY: number;
+  // Original click coordinates (unchanged)
+  globalX: number;
+  globalY: number;
+}
+
+/**
+ * Target hit message broadcast when a click lands on a registered target.
+ * Emitted alongside the enriched click — one message per matching target.
+ */
+export interface TargetHitMessage {
+  type: 'target_hit';
+  userId: string;
+  identity: IdentityResponse;
+  hit: HitTestResult;
+  timestamp: number;
+}
+
+/**
  * Union type for all Heat messages
  */
 export type HeatMessage =
@@ -173,7 +223,8 @@ export type HeatMessage =
   | GameStartMessage
   | GameMoveMessage
   | GameStateMessage
-  | GameEndMessage;
+  | GameEndMessage
+  | TargetHitMessage;
 
 /**
  * Viewer profile for display in overlays

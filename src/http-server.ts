@@ -5,6 +5,8 @@ import { config } from './config.js';
 import { ThemeManager } from './theme-manager.js';
 import { IdentityResolver } from './identity.js';
 import { PresenceManager } from './presence.js';
+import { ClickTargetManager } from './targets.js';
+import type { ClickTarget } from './types.js';
 
 /**
  * HTTP server for serving demo pages and theme API
@@ -15,12 +17,19 @@ export class HttpServer {
   private themeManager: ThemeManager;
   private identityResolver: IdentityResolver;
   private presenceManager: PresenceManager;
+  private targetManager: ClickTargetManager;
 
-  constructor(publicDir: string = './public', identityResolver?: IdentityResolver, presenceManager?: PresenceManager) {
+  constructor(
+    publicDir: string = './public',
+    identityResolver?: IdentityResolver,
+    presenceManager?: PresenceManager,
+    targetManager?: ClickTargetManager
+  ) {
     this.publicDir = publicDir;
     this.themeManager = new ThemeManager();
     this.identityResolver = identityResolver || new IdentityResolver();
     this.presenceManager = presenceManager || new PresenceManager();
+    this.targetManager = targetManager || new ClickTargetManager();
     this.server = createServer(this.handleRequest.bind(this));
   }
 
@@ -41,7 +50,7 @@ export class HttpServer {
 
     // CORS headers for API
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
@@ -77,8 +86,116 @@ export class HttpServer {
       return;
     }
 
+    // Target API routes
+    if (url === '/api/targets') {
+      await this.handleTargetsCollection(req, res);
+      return;
+    }
+    const targetMatch = url.match(/^\/api\/targets\/([^/]+)(\/toggle)?$/);
+    if (targetMatch) {
+      const targetName = decodeURIComponent(targetMatch[1]);
+      const isToggle = !!targetMatch[2];
+      if (isToggle) {
+        await this.handleTargetToggle(req, targetName, res);
+      } else {
+        await this.handleTargetItem(req, targetName, res);
+      }
+      return;
+    }
+
     // Static file serving
     await this.serveStatic(url, res);
+  }
+
+  /**
+   * GET /api/targets — list all targets
+   * POST /api/targets — create/replace a target (body: ClickTarget)
+   */
+  private async handleTargetsCollection(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      if (req.method === 'GET') {
+        const targets = this.targetManager.list();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ targets }));
+        return;
+      }
+
+      if (req.method === 'POST') {
+        const body = await this.readBody(req);
+        const target = JSON.parse(body) as ClickTarget;
+        const ok = this.targetManager.upsert(target);
+        if (!ok) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid target — check name, displayName, and bounds (0-1 range)' }));
+          return;
+        }
+        await this.targetManager.save();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.targetManager.get(target.name)));
+        return;
+      }
+
+      res.writeHead(405);
+      res.end('Method Not Allowed');
+    } catch (error: any) {
+      console.error('[Targets API Error]', error.message);
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message }));
+    }
+  }
+
+  /**
+   * GET /api/targets/:name — fetch a single target
+   * DELETE /api/targets/:name — remove a target
+   */
+  private async handleTargetItem(req: IncomingMessage, name: string, res: ServerResponse): Promise<void> {
+    if (req.method === 'GET') {
+      const target = this.targetManager.get(name);
+      if (!target) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Target not found: ${name}` }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(target));
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const removed = this.targetManager.remove(name);
+      if (!removed) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Target not found: ${name}` }));
+        return;
+      }
+      await this.targetManager.save();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ removed: name }));
+      return;
+    }
+
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  }
+
+  /**
+   * PUT /api/targets/:name/toggle — flip enabled state
+   */
+  private async handleTargetToggle(req: IncomingMessage, name: string, res: ServerResponse): Promise<void> {
+    if (req.method !== 'PUT') {
+      res.writeHead(405);
+      res.end('Method Not Allowed');
+      return;
+    }
+    const newState = this.targetManager.toggle(name);
+    if (newState === null) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Target not found: ${name}` }));
+      return;
+    }
+    await this.targetManager.save();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ name, enabled: newState }));
   }
 
   /**

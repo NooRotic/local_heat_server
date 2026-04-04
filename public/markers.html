@@ -508,9 +508,197 @@
       opacity: 1;
       z-index: 15;
     }
+
+    /* =============================
+       TARGET BOUNDING-BOX LAYER
+       ============================= */
+
+    #target-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      /* Sits above background, below marker layer (z-index 10) */
+      z-index: 5;
+    }
+
+    .target-rect {
+      position: absolute;
+      border: 2px dashed var(--target-color, var(--color-primary, #00ff88));
+      background: color-mix(in srgb, var(--target-color, var(--color-primary, #00ff88)) 6%, transparent);
+      box-shadow:
+        inset 0 0 20px color-mix(in srgb, var(--target-color, var(--color-primary, #00ff88)) 8%, transparent),
+        0 0 10px color-mix(in srgb, var(--target-color, var(--color-primary, #00ff88)) 15%, transparent);
+      pointer-events: none;
+      transition: border-width 0.1s ease, opacity 0.2s ease;
+    }
+
+    .target-rect.disabled {
+      opacity: 0.4;
+    }
+
+    .target-label {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--target-color, var(--color-primary, #00ff88));
+      text-shadow: 0 0 8px var(--target-color, var(--color-primary, #00ff88));
+      white-space: nowrap;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    .target-disabled-badge {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      padding: 2px 5px;
+      pointer-events: none;
+    }
+
+    /* Hit indicator dot spawned at relative click position */
+    .hit-dot {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--dot-color, #fff);
+      box-shadow:
+        0 0 10px var(--dot-color, #fff),
+        0 0 20px color-mix(in srgb, var(--dot-color, #fff) 40%, transparent);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    /* =============================
+       STATUS PANEL ADDITIONS
+       ============================= */
+
+    .status-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.06);
+      margin: 10px 0;
+    }
+
+    .target-stats-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--color-text-secondary, #adadb8);
+    }
+
+    .target-stats-row span {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 8px;
+      letter-spacing: 0.08em;
+    }
+
+    /* Show Targets toggle */
+    .show-targets-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 6px;
+      cursor: pointer;
+    }
+
+    .show-targets-label {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-text-secondary, #adadb8);
+      transition: color 0.2s;
+      user-select: none;
+    }
+
+    /* Reuse .toggle-track / .toggle-thumb from viewer-selector for the checkbox */
+    .show-targets-row .toggle-track {
+      position: relative;
+      width: 28px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 7px;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .show-targets-row .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .show-targets-row.active .toggle-track {
+      background: color-mix(in srgb, var(--color-primary, #00ff88) 20%, transparent);
+      border-color: var(--color-primary, #00ff88);
+    }
+
+    .show-targets-row.active .toggle-thumb {
+      transform: translateX(14px);
+      background: var(--color-primary, #00ff88);
+      box-shadow: 0 0 6px var(--color-primary, #00ff88);
+    }
+
+    .show-targets-row.active .show-targets-label {
+      color: var(--color-primary, #00ff88);
+      text-shadow: 0 0 6px var(--color-primary, #00ff88);
+    }
+
+    /* Refresh button */
+    .target-refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      cursor: pointer;
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-text-secondary, #adadb8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      padding: 3px 7px;
+      background: rgba(255, 255, 255, 0.03);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+
+    .target-refresh-btn:hover {
+      color: var(--color-primary, #00ff88);
+      border-color: var(--color-primary, #00ff88);
+      background: color-mix(in srgb, var(--color-primary, #00ff88) 8%, transparent);
+      text-shadow: 0 0 8px var(--color-primary, #00ff88);
+    }
   </style>
 </head>
 <body>
+
+  <!-- Target bounding-box layer (z-index 5, below marker layer at z-index 10) -->
+  <div id="target-layer"></div>
 
   <!-- Marker layer -->
   <div id="marker-layer"></div>
@@ -528,6 +716,20 @@
       </div>
       <span class="active-viewer-name" id="active-viewer-name">---</span>
     </div>
+
+    <!-- Target layer section -->
+    <div class="status-divider"></div>
+    <div class="target-stats-row">
+      <span id="target-count-text">Targets: loading...</span>
+      <span id="target-hit-count-text">Hits this session: 0</span>
+    </div>
+    <div class="show-targets-row active" id="show-targets-toggle" title="Toggle target bounding-box overlay">
+      <span class="show-targets-label">Show Targets</span>
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    </div>
+    <button class="target-refresh-btn" id="target-refresh-btn" title="Re-fetch targets from server">
+      &#x21bb; Refresh
+    </button>
   </div>
 
   <!-- Viewer selector panel (bottom) -->
@@ -1027,6 +1229,11 @@
       handleClickData(e.detail);
     });
 
+    // Target hit events from the WS
+    heat.on('target_hit', (e) => {
+      handleTargetHit(e.detail);
+    });
+
     /* =====================================================================
        LOCAL CLICK CAPTURE
        Manually captures page clicks and sends with selected userId.
@@ -1051,10 +1258,224 @@
     });
 
     /* =====================================================================
+       TARGET BOUNDING-BOX LAYER
+    ===================================================================== */
+
+    /** Map: targetName -> { el, data } */
+    const targetRects = new Map();
+
+    /** Session hit counter */
+    let sessionHitCount = 0;
+
+    /** Whether the target layer is visible */
+    let targetLayerVisible = true;
+
+    /**
+     * Fetch targets from the server and render them into #target-layer.
+     */
+    async function loadTargets() {
+      try {
+        const res = await fetch('http://localhost:7778/api/targets');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        renderTargets(json.targets || []);
+      } catch (err) {
+        console.warn('[markers] Could not fetch /api/targets:', err.message);
+        updateTargetCountText([], 'error');
+      }
+    }
+
+    /**
+     * Clear existing target rects and render a fresh set.
+     * @param {Array} targets
+     */
+    function renderTargets(targets) {
+      const layer = document.getElementById('target-layer');
+      // Remove old rects
+      targetRects.forEach(({ el }) => el.remove());
+      targetRects.clear();
+
+      targets.forEach(target => {
+        const el = buildTargetRect(target);
+        layer.appendChild(el);
+        targetRects.set(target.name, { el, data: target });
+      });
+
+      updateTargetCountText(targets);
+    }
+
+    /**
+     * Build a single target bounding-box DOM element.
+     * Bounds are normalized (0-1); we convert to percentage positions.
+     * @param {object} target
+     * @returns {HTMLElement}
+     */
+    function buildTargetRect(target) {
+      const bounds   = target.bounds;
+      const color    = (target.metadata && target.metadata.color) || 'var(--color-primary, #00ff88)';
+      const enabled  = target.enabled !== false;
+
+      const el = document.createElement('div');
+      el.className = 'target-rect' + (enabled ? '' : ' disabled');
+      el.dataset.targetName = target.name;
+      el.style.setProperty('--target-color', color);
+
+      // Position using percentage so it scales with the viewport
+      el.style.left   = (bounds.x * 100) + '%';
+      el.style.top    = (bounds.y * 100) + '%';
+      el.style.width  = (bounds.width * 100) + '%';
+      el.style.height = (bounds.height * 100) + '%';
+
+      // Label — always visible in upper-left corner
+      const label = document.createElement('div');
+      label.className = 'target-label';
+      label.textContent = target.displayName || target.name;
+      el.appendChild(label);
+
+      // Disabled badge
+      if (!enabled) {
+        const badge = document.createElement('div');
+        badge.className = 'target-disabled-badge';
+        badge.textContent = 'Disabled';
+        el.appendChild(badge);
+      }
+
+      return el;
+    }
+
+    /**
+     * Update the target count status text.
+     * @param {Array} targets
+     * @param {string} [errorState]
+     */
+    function updateTargetCountText(targets, errorState) {
+      const el = document.getElementById('target-count-text');
+      if (errorState === 'error') {
+        el.textContent = 'Targets: unavailable';
+        return;
+      }
+      const total   = targets.length;
+      const enabled = targets.filter(t => t.enabled !== false).length;
+      el.textContent = `Targets: ${total} loaded (${enabled} enabled)`;
+    }
+
+    /**
+     * Update the session hit count display.
+     */
+    function updateHitCountText() {
+      document.getElementById('target-hit-count-text').textContent =
+        `Hits this session: ${sessionHitCount}`;
+    }
+
+    /**
+     * Handle an incoming target_hit WebSocket event.
+     * @param {object} data - The full target_hit payload.
+     */
+    function handleTargetHit(data) {
+      sessionHitCount++;
+      updateHitCountText();
+
+      const hitInfo  = data.hit || {};
+      const identity = data.identity || {};
+      const hitColor = identity.color || themePrimary();
+
+      const entry = targetRects.get(hitInfo.targetName);
+      if (!entry) return;  // target not rendered (or layer not loaded yet)
+
+      const { el } = entry;
+
+      // --- Border flash tween ---
+      // GSAP cannot animate a CSS variable directly on the element here, so we
+      // animate border-width and box-shadow opacity via a proxy object.
+      const proxy = { borderWidth: 2 };
+      gsap.to(proxy, {
+        borderWidth: 5,
+        duration: 0.1,
+        ease: 'power2.out',
+        onUpdate() {
+          el.style.borderWidth = proxy.borderWidth + 'px';
+        },
+        onComplete() {
+          gsap.to(proxy, {
+            borderWidth: 2,
+            duration: 0.35,
+            ease: 'power2.inOut',
+            onUpdate() {
+              el.style.borderWidth = proxy.borderWidth + 'px';
+            },
+            onComplete() {
+              el.style.borderWidth = '';
+            },
+          });
+        },
+      });
+
+      // Briefly boost the overall rect opacity for a flash feel
+      gsap.fromTo(
+        el,
+        { opacity: el.classList.contains('disabled') ? 0.4 : 1 },
+        {
+          opacity: 1,
+          duration: 0.08,
+          ease: 'none',
+          yoyo: true,
+          repeat: 1,
+        }
+      );
+
+      // --- Hit dot indicator ---
+      // relativeX/Y are 0-1 within the target bounds rect
+      const relX = hitInfo.relativeX != null ? hitInfo.relativeX : 0.5;
+      const relY = hitInfo.relativeY != null ? hitInfo.relativeY : 0.5;
+
+      const dot = document.createElement('div');
+      dot.className = 'hit-dot';
+      dot.style.setProperty('--dot-color', hitColor);
+      // Position as percentage within the target el
+      dot.style.left = (relX * 100) + '%';
+      dot.style.top  = (relY * 100) + '%';
+      el.appendChild(dot);
+
+      gsap.fromTo(
+        dot,
+        { scale: 0, opacity: 1 },
+        {
+          scale: 2.5,
+          opacity: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          onComplete: () => dot.remove(),
+        }
+      );
+    }
+
+    /* =====================================================================
+       SHOW-TARGETS TOGGLE
+    ===================================================================== */
+
+    const showTargetsToggle = document.getElementById('show-targets-toggle');
+
+    showTargetsToggle.addEventListener('click', () => {
+      targetLayerVisible = !targetLayerVisible;
+      showTargetsToggle.classList.toggle('active', targetLayerVisible);
+      document.getElementById('target-layer').style.display =
+        targetLayerVisible ? '' : 'none';
+    });
+
+    /* =====================================================================
+       REFRESH BUTTON
+    ===================================================================== */
+
+    document.getElementById('target-refresh-btn').addEventListener('click', () => {
+      loadTargets();
+    });
+
+    /* =====================================================================
        BOOT
     ===================================================================== */
 
     loadViewerSelector();
+    loadTargets();
   </script>
 </body>
 </html>

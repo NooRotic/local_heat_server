@@ -3,9 +3,10 @@ import { createServer } from 'http';
 import { config } from './config.js';
 import { ChannelManager } from './channels.js';
 import { HttpServer } from './http-server.js';
-import type { HeatClickData, HeatSystemMessage, EnrichedClickData, ClientConnection } from './types.js';
+import type { HeatClickData, HeatSystemMessage, EnrichedClickData, ClientConnection, TargetHitMessage } from './types.js';
 import { IdentityResolver } from './identity.js';
 import { PresenceManager } from './presence.js';
+import { ClickTargetManager } from './targets.js';
 
 /**
  * Heat API Server Emulator
@@ -22,6 +23,7 @@ class HeatServer {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private identityResolver: IdentityResolver;
   private presenceManager: PresenceManager;
+  private targetManager: ClickTargetManager;
 
   constructor() {
     this.channelManager = new ChannelManager();
@@ -32,8 +34,11 @@ class HeatServer {
 
     this.presenceManager = new PresenceManager();
 
-    // Create HTTP server for serving demo pages + API (share identity resolver + presence)
-    this.httpServer = new HttpServer('./public', this.identityResolver, this.presenceManager);
+    this.targetManager = new ClickTargetManager();
+    this.targetManager.load();
+
+    // Create HTTP server for serving demo pages + API (share identity resolver + presence + targets)
+    this.httpServer = new HttpServer('./public', this.identityResolver, this.presenceManager, this.targetManager);
     
     // Create HTTP server for WebSocket upgrade
     const server = createServer();
@@ -204,9 +209,24 @@ class HeatServer {
       JSON.stringify(enriched)
     );
 
+    // Hit-test against registered targets, broadcast target_hit for each match
+    const hits = this.targetManager.hitTest(x, y);
+    const now = Date.now();
+    for (const hit of hits) {
+      const hitMessage: TargetHitMessage = {
+        type: 'target_hit',
+        userId: message.id,
+        identity,
+        hit,
+        timestamp: now,
+      };
+      this.channelManager.broadcast(client.channelId, JSON.stringify(hitMessage));
+    }
+
     if (config.debugMode) {
       const name = identity.resolved ? identity.displayName : identity.tier;
-      this.log(`🖱️ Click from ${name} (${message.id}) at (${message.x}, ${message.y}) in channel ${client.channelId}`);
+      const hitSuffix = hits.length > 0 ? ` → hit [${hits.map(h => h.targetDisplayName).join(', ')}]` : '';
+      this.log(`🖱️ Click from ${name} (${message.id}) at (${message.x}, ${message.y}) in channel ${client.channelId}${hitSuffix}`);
     }
   }
 
