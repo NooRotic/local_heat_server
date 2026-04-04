@@ -6,14 +6,14 @@ const WELCOME_TEMPLATES = [
   'Welcome to the {room}, {name}!',
   '{name} just stepped into the {room}',
   'The {room} welcomes {name}!',
-  '{name} is in the building!',
+  '{name} is in the building — welcome to the {room}!',
 ];
 
 /** Template lurk messages */
 const LURK_TEMPLATES = [
   '{name} slips into the shadows of the {room}',
   '{name} is lurking in the {room}',
-  'Catch you later, {name}',
+  'Catch you later, {name} — the {room} will be here',
   '{name} has gone quiet in the {room}',
 ];
 

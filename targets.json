@@ -1,0 +1,79 @@
+{
+  "targets": [
+    {
+      "name": "webcam",
+      "displayName": "Webcam",
+      "bounds": {
+        "x": 0.75,
+        "y": 0.7,
+        "width": 0.22,
+        "height": 0.28
+      },
+      "enabled": true,
+      "metadata": {
+        "sourceName": "Webcam Capture",
+        "color": "#ff6b35"
+      }
+    },
+    {
+      "name": "alert_box",
+      "displayName": "Alert Box",
+      "bounds": {
+        "x": 0.02,
+        "y": 0.02,
+        "width": 0.3,
+        "height": 0.15
+      },
+      "enabled": true,
+      "metadata": {
+        "sourceName": "Alert Overlay",
+        "color": "#9147ff"
+      }
+    },
+    {
+      "name": "game_capture",
+      "displayName": "Game Capture",
+      "bounds": {
+        "x": 0.05,
+        "y": 0.2,
+        "width": 0.65,
+        "height": 0.55
+      },
+      "enabled": true,
+      "metadata": {
+        "sourceName": "Game Capture",
+        "color": "#00ff88"
+      }
+    },
+    {
+      "name": "subscribe_btn",
+      "displayName": "Subscribe Button",
+      "bounds": {
+        "x": 0.02,
+        "y": 0.85,
+        "width": 0.18,
+        "height": 0.1
+      },
+      "enabled": true,
+      "metadata": {
+        "sourceName": "Subscribe CTA",
+        "color": "#ff69b4"
+      }
+    },
+    {
+      "name": "chat_panel",
+      "displayName": "Chat Panel",
+      "bounds": {
+        "x": 0.78,
+        "y": 0.02,
+        "width": 0.2,
+        "height": 0.6
+      },
+      "enabled": true,
+      "metadata": {
+        "sourceName": "Chat Overlay",
+        "color": "#1e90ff"
+      }
+    }
+  ]
+}
