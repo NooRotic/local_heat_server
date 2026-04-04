@@ -3,17 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heat - Markers Demo</title>
+  <title>Heat - Profile Markers</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="/theme-loader.js"></script>
   <script src="/heat-client.js"></script>
   <style>
-    * {
+    *, *::before, *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+    }
+
+    :root {
+      --marker-size: 40px;
+      --ring-width: 3px;
+      --ring-gap: 2px;
+      --tooltip-font: 'Orbitron', 'Courier New', monospace;
     }
 
     body {
@@ -21,139 +29,1032 @@
       background: var(--color-background, #0a0a0a);
       color: var(--color-text, #fff);
       overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+      user-select: none;
     }
 
-    .marker {
-      position: absolute;
-      width: 32px;
-      height: 32px;
-      transform: translate(-16px, -32px);
+    /* =============================
+       CLICK CANVAS (marker layer)
+       ============================= */
+
+    #marker-layer {
+      position: fixed;
+      inset: 0;
       pointer-events: none;
-      transition: all 0.3s ease-out;
+      z-index: 10;
     }
 
-    .marker svg {
-      filter: drop-shadow(0 2px 8px rgba(0,255,136,0.3));
+    /* =============================
+       PROFILE MARKER
+       ============================= */
+
+    .profile-marker {
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 20;
+      /* GSAP drives opacity/scale — start invisible */
+      opacity: 0;
     }
 
-    #info {
+    .marker-avatar-wrap {
+      position: relative;
+      width: var(--marker-size);
+      height: var(--marker-size);
+      flex-shrink: 0;
+    }
+
+    /* Outer glow ring — color injected inline */
+    .marker-ring {
+      position: absolute;
+      inset: calc(-1 * (var(--ring-width) + var(--ring-gap)));
+      border-radius: 50%;
+      border: var(--ring-width) solid var(--ring-color, #00ff88);
+      box-shadow:
+        0 0 8px var(--ring-color, #00ff88),
+        0 0 20px color-mix(in srgb, var(--ring-color, #00ff88) 40%, transparent),
+        inset 0 0 6px color-mix(in srgb, var(--ring-color, #00ff88) 20%, transparent);
+    }
+
+    /* Avatar circle */
+    .marker-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      background: #1a1a1a;
+    }
+
+    /* Fallback letter avatar */
+    .marker-avatar-fallback {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--tooltip-font);
+      font-weight: 900;
+      font-size: 16px;
+      color: #fff;
+      text-shadow: 0 0 8px currentColor;
+      letter-spacing: 0;
+    }
+
+    /* Hover tooltip */
+    .marker-tooltip {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      background: rgba(10, 10, 10, 0.92);
+      border: 1px solid var(--ring-color, #00ff88);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: var(--tooltip-font);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ring-color, #00ff88);
+      text-shadow: 0 0 8px var(--ring-color, #00ff88);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--ring-color, #00ff88) 25%, transparent);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    /* Tooltip arrow */
+    .marker-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--ring-color, #00ff88);
+    }
+
+    /* Show tooltip on marker hover — marker-layer allows pointer-events on children */
+    .profile-marker {
+      pointer-events: auto;
+    }
+
+    .profile-marker:hover .marker-tooltip {
+      opacity: 1;
+    }
+
+    .profile-marker:hover .marker-ring {
+      box-shadow:
+        0 0 14px var(--ring-color, #00ff88),
+        0 0 32px color-mix(in srgb, var(--ring-color, #00ff88) 50%, transparent),
+        inset 0 0 8px color-mix(in srgb, var(--ring-color, #00ff88) 25%, transparent);
+    }
+
+    /* Anonymous "?" marker — always round with no label */
+    .marker-anonymous .marker-avatar-fallback {
+      font-size: 18px;
+    }
+
+    /* =============================
+       STATUS PANEL (top-left)
+       ============================= */
+
+    #status-panel {
       position: fixed;
       top: 20px;
       left: 20px;
-      background: rgba(26, 26, 26, 0.9);
+      background: rgba(10, 10, 10, 0.88);
       border: 2px solid var(--color-border, #004400);
       border-radius: var(--effect-border-radius, 12px);
-      padding: 15px 20px;
-      font-size: 14px;
-      z-index: 100;
+      padding: 14px 18px;
+      z-index: 200;
       backdrop-filter: blur(var(--effect-backdrop-blur, 10px));
+      min-width: 200px;
     }
 
-    #info .panel-label {
+    .panel-label {
       display: block;
       font-family: var(--font-heading, 'Orbitron', monospace);
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.18em;
       color: var(--color-primary, #00ff88);
-      text-shadow: var(--glow-text, 0 0 8px rgba(0,255,136,0.8));
-      margin-bottom: 10px;
+      text-shadow: var(--glow-text, 0 0 8px #00ff88);
       text-transform: uppercase;
+      margin-bottom: 10px;
     }
 
-    .status {
-      display: inline-block;
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--color-text-secondary, #adadb8);
+    }
+
+    .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      margin-right: 8px;
       background: var(--color-status-disconnected, #ff4444);
+      flex-shrink: 0;
+      transition: background 0.3s;
     }
 
-    .status.connected {
+    .status-dot.connected {
       background: var(--color-status-connected, #00ff88);
       box-shadow: 0 0 8px var(--color-status-connected, #00ff88);
-      animation: neon-pulse 2s ease-in-out infinite;
+      animation: pulse-dot 2s ease-in-out infinite;
     }
 
-    @keyframes neon-pulse {
+    @keyframes pulse-dot {
       0%, 100% { box-shadow: 0 0 8px var(--color-status-connected, #00ff88); }
-      50% { box-shadow: 0 0 2px var(--color-status-connected, #00ff88); }
+      50%       { box-shadow: 0 0 3px var(--color-status-connected, #00ff88); }
+    }
+
+    /* Active viewer badge in status panel */
+    .active-viewer-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 11px;
+    }
+
+    .active-viewer-pip {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--color-primary, #00ff88);
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #1a1a1a;
+    }
+
+    .active-viewer-name {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--color-primary, #00ff88);
+      text-shadow: 0 0 6px var(--color-primary, #00ff88);
+      text-transform: uppercase;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* =============================
+       VIEWER SELECTOR PANEL (bottom)
+       ============================= */
+
+    #viewer-selector {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      background: linear-gradient(
+        to top,
+        rgba(10, 10, 10, 0.97) 0%,
+        rgba(10, 10, 10, 0.85) 80%,
+        transparent 100%
+      );
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 14px 24px 18px;
+    }
+
+    .selector-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .selector-title {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 8px #00ff88);
+      text-transform: uppercase;
+    }
+
+    /* Random toggle */
+    .random-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-text-secondary, #adadb8);
+      transition: color 0.2s;
+    }
+
+    .random-toggle.active {
+      color: var(--color-primary, #00ff88);
+      text-shadow: 0 0 8px var(--color-primary, #00ff88);
+    }
+
+    .toggle-track {
+      position: relative;
+      width: 32px;
+      height: 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .random-toggle.active .toggle-track {
+      background: color-mix(in srgb, var(--color-primary, #00ff88) 20%, transparent);
+      border-color: var(--color-primary, #00ff88);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 10px;
+      height: 10px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .random-toggle.active .toggle-thumb {
+      transform: translateX(16px);
+      background: var(--color-primary, #00ff88);
+      box-shadow: 0 0 6px var(--color-primary, #00ff88);
+    }
+
+    /* Viewer button strip */
+    .viewer-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .viewer-strip::-webkit-scrollbar {
+      height: 3px;
+    }
+
+    .viewer-strip::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .viewer-strip::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    /* Individual viewer button */
+    .viewer-btn {
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.03);
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+
+    .viewer-btn:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+
+    .viewer-btn.selected {
+      background: color-mix(in srgb, var(--btn-color, #00ff88) 12%, transparent);
+      border-color: var(--btn-color, #00ff88);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--btn-color, #00ff88) 30%, transparent);
+    }
+
+    .viewer-btn.selected .btn-pip-ring {
+      box-shadow:
+        0 0 8px var(--btn-color, #00ff88),
+        0 0 18px color-mix(in srgb, var(--btn-color, #00ff88) 40%, transparent);
+    }
+
+    .btn-pip-wrap {
+      position: relative;
+      width: 36px;
+      height: 36px;
+    }
+
+    .btn-pip-ring {
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid var(--btn-color, #555);
+      transition: box-shadow 0.2s;
+    }
+
+    .btn-pip {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      background: #1a1a1a;
+    }
+
+    .btn-pip-fallback {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-weight: 900;
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .btn-label {
+      font-family: var(--font-heading, 'Orbitron', monospace);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      max-width: 52px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .viewer-btn.selected .btn-label {
+      color: var(--btn-color, #00ff88);
+      text-shadow: 0 0 6px var(--btn-color, #00ff88);
+    }
+
+    /* Tier badge */
+    .tier-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(10,10,10,0.8);
+      font-size: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* =============================
+       SCAN LINE OVERLAY (cyberpunk)
+       ============================= */
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.04) 2px,
+        rgba(0, 0, 0, 0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* =============================
+       RIPPLE EFFECT ON CLICK
+       ============================= */
+
+    .click-ripple {
+      position: fixed;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4);
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 1;
+      z-index: 15;
     }
   </style>
 </head>
 <body>
-  <div id="info">
-    <span class="panel-label">Markers</span>
-    <span class="status" id="status"></span>
-    <span id="statusText">Connecting...</span>
+
+  <!-- Marker layer -->
+  <div id="marker-layer"></div>
+
+  <!-- Status panel (top-left) -->
+  <div id="status-panel">
+    <span class="panel-label">Profile Markers</span>
+    <div class="status-row">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Connecting...</span>
+    </div>
+    <div class="active-viewer-row" id="active-viewer-row" style="display:none">
+      <div id="active-pip-wrap" style="width:20px;height:20px;border-radius:50%;overflow:hidden;border:2px solid #00ff88;flex-shrink:0;">
+        <!-- filled by JS -->
+      </div>
+      <span class="active-viewer-name" id="active-viewer-name">---</span>
+    </div>
+  </div>
+
+  <!-- Viewer selector panel (bottom) -->
+  <div id="viewer-selector">
+    <div class="selector-header">
+      <span class="selector-title">Click As Viewer</span>
+      <div class="random-toggle" id="random-toggle" title="Pick a random viewer per click">
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        <span>Random Each Click</span>
+      </div>
+    </div>
+    <div class="viewer-strip" id="viewer-strip">
+      <!-- populated by JS -->
+    </div>
   </div>
 
   <script>
-    const channelId = getChannelFromURL('channel', '12345');
-    const markers = new Map();
+    /* =====================================================================
+       CONFIG
+    ===================================================================== */
+    const MARKER_DURATION_MS = 5000;   // how long markers stay before fading
+    const MARKER_FADE_MS    = 500;     // exit animation duration
+    const MARKER_ENTER_MS   = 300;     // entrance animation duration
+    const MOVE_TWEEN_MS     = 300;     // position tween duration when same user re-clicks
 
-    // Create Heat client
+    /* =====================================================================
+       STATE
+    ===================================================================== */
+    let selectedViewerId   = null;     // currently selected viewer ID for local clicks
+    let selectedViewerData = null;     // full viewer object for selected viewer
+    let randomMode         = false;    // random viewer per click toggle
+    let allViewerData      = [];       // flat list including anon/unverified sentinels
+
+    // Map: userId -> { el, x, y, timer, gsapTween }
+    const activeMarkers = new Map();
+
+    /* =====================================================================
+       UTILITIES
+    ===================================================================== */
+
+    /** Derive a deterministic hex color from a string token */
+    function colorFromToken(token) {
+      let hash = 0;
+      for (let i = 0; i < token.length; i++) {
+        hash = ((hash << 5) - hash) + token.charCodeAt(i);
+        hash |= 0;
+      }
+      const hue = Math.abs(hash % 360);
+      return `hsl(${hue}, 80%, 60%)`;
+    }
+
+    /** Convert any color string to rgba with given alpha for GSAP tweens */
+    function withAlpha(color, alpha) {
+      // We rely on CSS for glow effects — this is just a helper note.
+      return color;
+    }
+
+    /** Get theme primary color from CSS variable */
+    function themePrimary() {
+      return getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-primary').trim() || '#00ff88';
+    }
+
+    /* =====================================================================
+       MARKER RENDERING
+    ===================================================================== */
+
+    /**
+     * Build or update a profile marker for a click event.
+     * @param {object} data - Enriched click payload from heat WS.
+     */
+    function handleClickData(data) {
+      const userId   = data.id;
+      const px       = parseFloat(data.x) * window.innerWidth;
+      const py       = parseFloat(data.y) * window.innerHeight;
+      const identity = data.identity || null;
+
+      if (activeMarkers.has(userId)) {
+        updateMarkerPosition(userId, px, py);
+      } else {
+        spawnMarker(userId, px, py, identity);
+      }
+    }
+
+    /**
+     * Determine ring color for a given id + identity.
+     */
+    function resolveRingColor(userId, identity) {
+      if (identity && identity.color) return identity.color;
+      if (userId && userId.startsWith('A')) return colorFromToken(userId);
+      if (userId && userId.startsWith('U')) return colorFromToken(userId);
+      return colorFromToken(userId || 'anon');
+    }
+
+    /**
+     * Create and mount a new profile marker DOM element, animate it in.
+     */
+    function spawnMarker(userId, px, py, identity) {
+      const tier     = resolveTier(userId, identity);
+      const color    = resolveRingColor(userId, identity);
+      const name     = identity ? (identity.displayName || null) : null;
+      const imgUrl   = identity ? (identity.profileImageUrl || null) : null;
+
+      const el = document.createElement('div');
+      el.className = `profile-marker ${tier === 'anonymous' ? 'marker-anonymous' : ''}`;
+      el.style.setProperty('--ring-color', color);
+      el.style.left = px + 'px';
+      el.style.top  = py + 'px';
+
+      el.innerHTML = buildMarkerHTML(userId, tier, color, name, imgUrl);
+
+      // Wire up image onerror fallback
+      const img = el.querySelector('.marker-avatar');
+      if (img) {
+        img.addEventListener('error', () => {
+          img.replaceWith(buildFallbackEl(tier, color, name));
+        });
+      }
+
+      document.getElementById('marker-layer').appendChild(el);
+
+      // GSAP entrance: scale 0→1, opacity 0→1
+      gsap.fromTo(el,
+        { scale: 0, opacity: 0 },
+        {
+          scale: 1,
+          opacity: 1,
+          duration: MARKER_ENTER_MS / 1000,
+          ease: 'back.out(1.6)',
+        }
+      );
+
+      scheduleMarkerExit(userId, el);
+      activeMarkers.set(userId, { el, px, py, timer: null });
+    }
+
+    /**
+     * Smoothly tween an existing marker to a new position and reset its timer.
+     */
+    function updateMarkerPosition(userId, px, py) {
+      const state = activeMarkers.get(userId);
+      if (!state) return;
+
+      // Kill pending exit timer so it doesn't fire mid-move
+      if (state.timer) clearTimeout(state.timer);
+
+      // Tween to new position
+      gsap.to(state.el, {
+        left: px + 'px',
+        top:  py + 'px',
+        duration: MOVE_TWEEN_MS / 1000,
+        ease: 'power2.out',
+      });
+
+      state.px = px;
+      state.py = py;
+
+      // Restart exit clock
+      scheduleMarkerExit(userId, state.el);
+    }
+
+    /**
+     * Schedule fade-out and DOM removal for a marker.
+     */
+    function scheduleMarkerExit(userId, el) {
+      const state = activeMarkers.get(userId);
+
+      const timer = setTimeout(() => {
+        // GSAP exit: opacity 1→0, scale 1→0.5
+        gsap.to(el, {
+          opacity: 0,
+          scale: 0.5,
+          duration: MARKER_FADE_MS / 1000,
+          ease: 'power2.in',
+          onComplete: () => {
+            el.remove();
+            activeMarkers.delete(userId);
+          },
+        });
+      }, MARKER_DURATION_MS);
+
+      if (state) state.timer = timer;
+    }
+
+    /**
+     * Determine the tier label for rendering logic.
+     */
+    function resolveTier(userId, identity) {
+      if (identity && identity.tier) return identity.tier;
+      if (!userId)                   return 'anonymous';
+      if (userId.startsWith('A'))    return 'anonymous';
+      if (userId.startsWith('U'))    return 'unverified';
+      return 'verified';
+    }
+
+    /**
+     * Build the inner HTML for a marker element.
+     */
+    function buildMarkerHTML(userId, tier, color, name, imgUrl) {
+      let avatarHTML;
+
+      if (tier === 'anonymous') {
+        avatarHTML = `
+          <div class="marker-avatar-fallback marker-avatar"
+               style="background:${color}22;color:${color};border:2px solid ${color}44;">
+            ?
+          </div>`;
+      } else if (imgUrl) {
+        avatarHTML = `
+          <img class="marker-avatar"
+               src="${escapeAttr(imgUrl)}"
+               alt="${escapeAttr(name || userId)}"
+               draggable="false"/>`;
+      } else {
+        const letter = name ? name.charAt(0).toUpperCase() : (userId ? userId.charAt(0).toUpperCase() : '?');
+        avatarHTML = buildFallbackHTMLString(tier, color, letter);
+      }
+
+      const tooltipHTML = (tier === 'verified' && name)
+        ? `<div class="marker-tooltip">${escapeHTML(name)}</div>`
+        : '';
+
+      const dropShadow = tier === 'verified'
+        ? `drop-shadow(0 4px 16px ${color}55)`
+        : `drop-shadow(0 2px 8px rgba(0,0,0,0.5))`;
+
+      return `
+        <div class="marker-avatar-wrap" style="filter:${dropShadow}">
+          <div class="marker-ring"></div>
+          ${avatarHTML}
+          ${tooltipHTML}
+        </div>`;
+    }
+
+    /** Build a fallback colored-letter div element (used in onerror) */
+    function buildFallbackEl(tier, color, name) {
+      const letter = name ? name.charAt(0).toUpperCase() : '?';
+      const div = document.createElement('div');
+      div.className = 'marker-avatar-fallback marker-avatar';
+      div.style.background = color + '22';
+      div.style.color = color;
+      div.style.border = `2px solid ${color}66`;
+      div.style.textShadow = `0 0 10px ${color}`;
+      div.textContent = tier === 'anonymous' ? '?' : letter;
+      return div;
+    }
+
+    /** Build fallback avatar as an HTML string */
+    function buildFallbackHTMLString(tier, color, letter) {
+      const char = tier === 'anonymous' ? '?' : letter;
+      return `
+        <div class="marker-avatar-fallback marker-avatar"
+             style="background:${color}22;color:${color};border:2px solid ${color}66;text-shadow:0 0 10px ${color}">
+          ${char}
+        </div>`;
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function escapeHTML(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* =====================================================================
+       RIPPLE ON CLICK
+    ===================================================================== */
+
+    document.addEventListener('click', (e) => {
+      // Don't ripple on viewer-selector panel clicks
+      if (e.target.closest('#viewer-selector') || e.target.closest('#status-panel')) return;
+
+      const ripple = document.createElement('div');
+      ripple.className = 'click-ripple';
+      const ringColor = selectedViewerData ? resolveRingColor(selectedViewerId, selectedViewerData) : themePrimary();
+      ripple.style.borderColor = ringColor;
+      ripple.style.boxShadow = `0 0 12px ${ringColor}88`;
+      ripple.style.left = e.clientX + 'px';
+      ripple.style.top  = e.clientY + 'px';
+      document.body.appendChild(ripple);
+
+      gsap.fromTo(ripple,
+        { scale: 0, opacity: 0.8 },
+        {
+          scale: 2.5,
+          opacity: 0,
+          duration: 0.5,
+          ease: 'power2.out',
+          onComplete: () => ripple.remove(),
+        }
+      );
+    });
+
+    /* =====================================================================
+       VIEWER SELECTOR PANEL
+    ===================================================================== */
+
+    // Built-in special viewers
+    const SPECIAL_VIEWERS = [
+      {
+        userId: 'U_test_unverified',
+        displayName: 'Unverified',
+        profileImageUrl: null,
+        color: colorFromToken('U_test_unverified'),
+        tier: 'unverified',
+        isSpecial: true,
+      },
+      {
+        userId: 'A_test_anon',
+        displayName: 'Anonymous',
+        profileImageUrl: null,
+        color: colorFromToken('A_test_anon'),
+        tier: 'anonymous',
+        isSpecial: true,
+      },
+    ];
+
+    async function loadViewerSelector() {
+      let viewers = [];
+      try {
+        const res = await fetch('/api/viewers');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        viewers = (json.viewers || []).map(v => ({ ...v, tier: 'verified' }));
+      } catch (err) {
+        console.warn('[markers] Could not fetch /api/viewers:', err.message);
+        // Leave as empty array — special viewers still load
+      }
+
+      allViewerData = [...viewers, ...SPECIAL_VIEWERS];
+
+      renderViewerStrip(allViewerData);
+
+      // Select the first viewer by default if available
+      if (allViewerData.length > 0) {
+        selectViewer(allViewerData[0]);
+      }
+    }
+
+    function renderViewerStrip(viewers) {
+      const strip = document.getElementById('viewer-strip');
+      strip.innerHTML = '';
+
+      viewers.forEach(viewer => {
+        const btn = buildViewerButton(viewer);
+        strip.appendChild(btn);
+      });
+    }
+
+    function buildViewerButton(viewer) {
+      const color    = viewer.color || colorFromToken(viewer.userId);
+      const tier     = resolveTier(viewer.userId, viewer);
+      const imgUrl   = viewer.profileImageUrl || null;
+      const initial  = viewer.displayName ? viewer.displayName.charAt(0).toUpperCase() : '?';
+      const isAnon   = tier === 'anonymous';
+
+      const btn = document.createElement('div');
+      btn.className = 'viewer-btn';
+      btn.dataset.userId = viewer.userId;
+      btn.style.setProperty('--btn-color', color);
+      btn.title = viewer.displayName || viewer.userId;
+
+      // Build avatar pip
+      let pipHTML;
+      if (imgUrl) {
+        pipHTML = `<img class="btn-pip"
+                        src="${escapeAttr(imgUrl)}"
+                        alt="${escapeAttr(viewer.displayName || viewer.userId)}"
+                        draggable="false"
+                        onerror="this.replaceWith(buildBtnFallback('${escapeAttr(color)}','${escapeAttr(isAnon ? '?' : initial)}'))"/>`;
+      } else {
+        pipHTML = `<div class="btn-pip-fallback btn-pip"
+                        style="background:${color}22;color:${color};text-shadow:0 0 8px ${color}">
+                     ${isAnon ? '?' : initial}
+                   </div>`;
+      }
+
+      const labelText = isAnon ? 'Anon' : (viewer.displayName || viewer.userId).substring(0, 8);
+
+      btn.innerHTML = `
+        <div class="btn-pip-wrap">
+          <div class="btn-pip-ring"></div>
+          ${pipHTML}
+        </div>
+        <span class="btn-label">${escapeHTML(labelText)}</span>
+      `;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectViewer(viewer);
+      });
+
+      return btn;
+    }
+
+    // Global helper so onerror inline handlers can call it
+    window.buildBtnFallback = function(color, letter) {
+      const div = document.createElement('div');
+      div.className = 'btn-pip-fallback btn-pip';
+      div.style.background = color + '22';
+      div.style.color = color;
+      div.style.textShadow = `0 0 8px ${color}`;
+      div.textContent = letter;
+      return div;
+    };
+
+    function selectViewer(viewer) {
+      selectedViewerId   = viewer.userId;
+      selectedViewerData = viewer;
+
+      // Update button highlight
+      document.querySelectorAll('.viewer-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.userId === viewer.userId);
+      });
+
+      // Update status panel active row
+      updateActiveViewerStatus(viewer);
+    }
+
+    function updateActiveViewerStatus(viewer) {
+      if (!viewer) return;
+      const row    = document.getElementById('active-viewer-row');
+      const wrap   = document.getElementById('active-pip-wrap');
+      const nameEl = document.getElementById('active-viewer-name');
+      const color  = viewer.color || colorFromToken(viewer.userId);
+      const tier   = resolveTier(viewer.userId, viewer);
+      const initial = viewer.displayName ? viewer.displayName.charAt(0).toUpperCase() : '?';
+      const isAnon  = tier === 'anonymous';
+
+      wrap.style.borderColor = color;
+      wrap.style.boxShadow   = `0 0 8px ${color}88`;
+
+      if (viewer.profileImageUrl) {
+        wrap.innerHTML = `<img src="${escapeAttr(viewer.profileImageUrl)}"
+                               style="width:100%;height:100%;object-fit:cover;"
+                               onerror="this.parentElement.innerHTML=buildStatusPipFallback('${escapeAttr(color)}','${escapeAttr(isAnon ? '?' : initial)}')"/>`;
+      } else {
+        wrap.innerHTML = buildStatusPipFallback(color, isAnon ? '?' : initial);
+      }
+
+      nameEl.textContent = viewer.displayName || viewer.userId;
+      nameEl.style.color       = color;
+      nameEl.style.textShadow  = `0 0 8px ${color}`;
+      row.style.display = 'flex';
+    }
+
+    window.buildStatusPipFallback = function(color, letter) {
+      return `<div style="width:100%;height:100%;background:${color}22;color:${color};
+                          display:flex;align-items:center;justify-content:center;
+                          font-family:'Orbitron',monospace;font-size:9px;font-weight:900;
+                          text-shadow:0 0 6px ${color}">${letter}</div>`;
+    };
+
+    /* =====================================================================
+       RANDOM MODE TOGGLE
+    ===================================================================== */
+
+    document.getElementById('random-toggle').addEventListener('click', () => {
+      randomMode = !randomMode;
+      document.getElementById('random-toggle').classList.toggle('active', randomMode);
+    });
+
+    function pickRandomViewer() {
+      if (!allViewerData.length) return null;
+      return allViewerData[Math.floor(Math.random() * allViewerData.length)];
+    }
+
+    /* =====================================================================
+       HEAT CLIENT SETUP
+    ===================================================================== */
+
+    const channelId = getChannelFromURL('channel', '12345');
+
     const heat = new HeatClient(channelId, {
-      apiUrl: 'ws://localhost:7777',
+      apiUrl:    'ws://localhost:7777',
       debugMode: true,
     });
 
     // Connection status
     heat.on('connected', () => {
-      document.getElementById('status').classList.add('connected');
-      document.getElementById('statusText').textContent = 'Markers Demo - Click anywhere!';
+      document.getElementById('status-dot').classList.add('connected');
+      document.getElementById('status-text').textContent = 'Click to place markers';
     });
 
     heat.on('disconnected', () => {
-      document.getElementById('status').classList.remove('connected');
-      document.getElementById('statusText').textContent = 'Disconnected';
+      document.getElementById('status-dot').classList.remove('connected');
+      document.getElementById('status-text').textContent = 'Disconnected — retrying...';
     });
 
-    // Handle clicks
+    // Incoming enriched click events from the WS (broadcasted back by server)
     heat.on('click', (e) => {
-      const data = e.detail;
-      updateMarker(data.id, parseFloat(data.x), parseFloat(data.y));
+      handleClickData(e.detail);
     });
 
-    // Create or update marker
-    function updateMarker(userId, x, y) {
-      let marker = markers.get(userId);
+    /* =====================================================================
+       LOCAL CLICK CAPTURE
+       Manually captures page clicks and sends with selected userId.
+       We do NOT use capturePageClicks() because we need per-click user control.
+    ===================================================================== */
 
-      if (!marker) {
-        marker = createMarkerElement();
-        document.body.appendChild(marker);
-        markers.set(userId, marker);
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#viewer-selector') || e.target.closest('#status-panel')) return;
+
+      const x = e.clientX / window.innerWidth;
+      const y = e.clientY / window.innerHeight;
+
+      let viewerForClick = randomMode ? pickRandomViewer() : selectedViewerData;
+
+      if (!viewerForClick) {
+        // No viewer selected — use anonymous fallback
+        viewerForClick = SPECIAL_VIEWERS.find(v => v.tier === 'anonymous');
       }
 
-      // Update position
-      marker.style.left = (x * window.innerWidth) + 'px';
-      marker.style.top = (y * window.innerHeight) + 'px';
-    }
+      const userId = viewerForClick ? viewerForClick.userId : `A${Math.random().toString(36).slice(2,7)}`;
+      heat.sendClick(x, y, userId);
+    });
 
-    // Create marker SVG element
-    function createMarkerElement() {
-      const marker = document.createElement('div');
-      marker.className = 'marker';
+    /* =====================================================================
+       BOOT
+    ===================================================================== */
 
-      // Random color for each user — biased toward the theme primary if available
-      const hue = Math.random() * 360;
-      const color = `hsl(${hue}, 70%, 60%)`;
-      const stroke = (window.HeatTheme && window.HeatTheme.colors.primary) || '#00ff88';
-
-      marker.innerHTML = `
-        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <path d="M16 2C10.5 2 6 6.5 6 12c0 7 10 18 10 18s10-11 10-18c0-5.5-4.5-10-10-10z"
-                fill="${color}" stroke="${stroke}" stroke-width="2"/>
-          <circle cx="16" cy="12" r="4" fill="white"/>
-        </svg>
-      `;
-
-      return marker;
-    }
-
-    // Capture local clicks
-    capturePageClicks(heat);
+    loadViewerSelector();
   </script>
 </body>
 </html>
