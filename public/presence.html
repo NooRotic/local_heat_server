@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Champagne Room — Heat Presence Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="/theme-loader.js"></script>
+  <script src="/heat-client.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body, 'Courier New', monospace);
+      background: var(--color-background, #0a0a0a);
+      color: var(--color-text, #fff);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Bullseye Button ─────────────────────────────────────── */
+    .bullseye-container {
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      z-index: 1000;
+      cursor: grab;
+    }
+    .bullseye-container.dragging { cursor: grabbing; }
+
+    .bullseye {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        var(--color-primary, #9a04ae) 0%,
+        transparent 30%,
+        var(--color-primary, #9a04ae) 35%,
+        transparent 50%,
+        var(--color-primary, #9a04ae) 55%,
+        transparent 70%);
+      border: 3px solid var(--color-primary, #9a04ae);
+      box-shadow: 0 0 20px var(--color-primary, #9a04ae), inset 0 0 15px rgba(0,0,0,0.5);
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+    .bullseye:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 30px var(--color-primary, #9a04ae), 0 0 60px var(--color-primary, #9a04ae), inset 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    /* Orbital options */
+    .orbital-options {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+    }
+    .orbital-options.expanded {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .orbital-btn {
+      position: absolute;
+      width: 80px;
+      height: 32px;
+      border-radius: 16px;
+      border: 2px solid;
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .orbital-btn:hover { transform: scale(1.1); }
+
+    .orbital-present {
+      background: rgba(0, 255, 136, 0.15);
+      border-color: #00ff88;
+      color: #00ff88;
+      top: -50px;
+      left: -40px;
+    }
+    .orbital-present:hover { box-shadow: 0 0 15px #00ff88; }
+
+    .orbital-lurk {
+      background: rgba(255, 170, 0, 0.15);
+      border-color: #ffaa00;
+      color: #ffaa00;
+      top: 30px;
+      left: -40px;
+    }
+    .orbital-lurk:hover { box-shadow: 0 0 15px #ffaa00; }
+
+    /* ─── Presence Board ─────────────────────────────────────── */
+    .presence-board {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      background: var(--color-panel-bg, rgba(0, 20, 0, 0.85));
+      border: var(--effect-border-width, 2px) solid var(--color-border-accent, #ff00c8);
+      border-radius: var(--effect-border-radius, 12px);
+      backdrop-filter: blur(var(--effect-backdrop-blur, 7px));
+      overflow: hidden;
+      z-index: 500;
+    }
+
+    .board-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border, #004400);
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .board-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--color-primary, #9a04ae);
+      text-shadow: 0 0 10px var(--color-primary, #9a04ae);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .board-count {
+      font-size: 10px;
+      color: var(--color-text-muted, #77777d);
+      margin-top: 2px;
+    }
+
+    .board-section {
+      padding: 10px 16px;
+    }
+    .board-section-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .label-present { color: #00ff88; }
+    .label-lurking { color: #ffaa00; }
+
+    .member-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .member-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .member-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .member-row.present .member-avatar {
+      border-color: var(--member-color, #00ff88);
+      box-shadow: 0 0 8px var(--member-color, #00ff88);
+    }
+    .member-row.lurking .member-avatar {
+      border-color: #555;
+      filter: grayscale(0.7) brightness(0.5);
+    }
+
+    .member-name {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .member-row.lurking .member-name {
+      color: var(--color-text-muted, #77777d);
+    }
+
+    .member-row.new-arrival {
+      animation: memberGlow 1.5s ease-out;
+    }
+
+    @keyframes memberGlow {
+      0% { background: rgba(0, 255, 136, 0.3); }
+      100% { background: transparent; }
+    }
+
+    .empty-state {
+      font-size: 11px;
+      color: var(--color-text-muted, #77777d);
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    /* ─── Announcement Banner ────────────────────────────────── */
+    .announcement-bar {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--color-primary, #9a04ae);
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-primary, #9a04ae);
+      text-shadow: 0 0 10px var(--color-primary, #9a04ae);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 900;
+      white-space: nowrap;
+    }
+
+    /* ─── Simulated Chat Panel ───────────────────────────────── */
+    .chat-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 320px;
+      background: var(--color-panel-bg, rgba(0, 20, 0, 0.85));
+      border: var(--effect-border-width, 2px) solid var(--color-border, #004400);
+      border-radius: var(--effect-border-radius, 12px);
+      backdrop-filter: blur(var(--effect-backdrop-blur, 7px));
+      overflow: hidden;
+      z-index: 500;
+    }
+
+    .chat-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--color-border, #004400);
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-accent, #ff6b35);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .chat-log {
+      height: 180px;
+      overflow-y: auto;
+      padding: 10px 16px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .chat-log .msg-system { color: #ffaa00; font-style: italic; }
+    .chat-log .msg-presence { color: #00ff88; }
+    .chat-log .msg-chat { color: var(--color-text-secondary, #adadb8); }
+
+    .chat-input-row {
+      display: flex;
+      border-top: 1px solid var(--color-border, #004400);
+    }
+    .chat-viewer-select {
+      width: 120px;
+      padding: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-right: 1px solid var(--color-border, #004400);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 8px 12px;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+    .chat-input::placeholder { color: #555; }
+    .chat-input:focus { outline: none; background: #222; }
+
+    /* ─── Info overlay ───────────────────────────────────────── */
+    .info-bar {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(26, 26, 26, 0.9);
+      border: 1px solid var(--color-border, #004400);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 11px;
+      color: var(--color-text-muted, #77777d);
+      z-index: 500;
+    }
+    .info-bar a { color: var(--color-primary, #9a04ae); text-decoration: none; }
+    .info-bar a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Info -->
+  <div class="info-bar">
+    <a href="/">&#8592; Home</a> &nbsp;|&nbsp; Champagne Room Prototype
+    &nbsp;|&nbsp; <span id="connStatus">Connecting...</span>
+  </div>
+
+  <!-- Presence Board -->
+  <div class="presence-board" id="presenceBoard">
+    <div class="board-header">
+      <div class="board-title" id="boardTitle">Champagne Room</div>
+      <div class="board-count" id="boardCount">0 members</div>
+    </div>
+    <div class="board-section">
+      <div class="board-section-label label-present">Present (<span id="presentCount">0</span>)</div>
+      <div class="member-list" id="presentList">
+        <div class="empty-state">No one here yet</div>
+      </div>
+    </div>
+    <div class="board-section">
+      <div class="board-section-label label-lurking">Lurking (<span id="lurkingCount">0</span>)</div>
+      <div class="member-list" id="lurkingList">
+        <div class="empty-state">No lurkers</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcement Banner (GSAP animated) -->
+  <div class="announcement-bar" id="announcement"></div>
+
+  <!-- Bullseye Button -->
+  <div class="bullseye-container" id="bullseyeContainer">
+    <div class="bullseye" id="bullseye"></div>
+    <div class="orbital-options" id="orbitalOptions">
+      <button class="orbital-btn orbital-present" id="btnPresent">Present</button>
+      <button class="orbital-btn orbital-lurk" id="btnLurk">Lurk</button>
+    </div>
+  </div>
+
+  <!-- Simulated Chat Panel -->
+  <div class="chat-panel">
+    <div class="chat-header">Simulated Chat</div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-input-row">
+      <select class="chat-viewer-select" id="viewerSelect">
+        <option value="">Loading...</option>
+      </select>
+      <input type="text" class="chat-input" id="chatInput" placeholder="Type a message or !present / !lurk..." />
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ── State ────────────────────────────────────────────────────
+    const members = new Map(); // userId -> { status, identity }
+    let bullseyeExpanded = false;
+    let collapseTimer = null;
+    let selectedViewerId = '';
+    let roomName = 'Champagne Room';
+
+    // ── Heat Client ──────────────────────────────────────────────
+    const channelId = getChannelFromURL('channel', '12345');
+    const heat = new HeatClient(channelId, { debugMode: true });
+
+    heat.on('connected', () => {
+      document.getElementById('connStatus').textContent = 'Connected';
+      document.getElementById('connStatus').style.color = '#00ff88';
+    });
+    heat.on('disconnected', () => {
+      document.getElementById('connStatus').textContent = 'Disconnected';
+      document.getElementById('connStatus').style.color = '#ff4444';
+    });
+
+    // ── Load viewers for selector ────────────────────────────────
+    async function loadViewers() {
+      try {
+        const res = await fetch('/api/viewers');
+        const data = await res.json();
+        const select = document.getElementById('viewerSelect');
+        select.innerHTML = '';
+        for (const v of data.viewers) {
+          const opt = document.createElement('option');
+          opt.value = v.userId;
+          opt.textContent = v.displayName;
+          select.appendChild(opt);
+        }
+        // Add unverified/anonymous options
+        select.innerHTML += '<option value="U_test_unverified">Unverified</option>';
+        select.innerHTML += '<option value="A_test_anon">Anonymous</option>';
+        selectedViewerId = select.value;
+      } catch (e) {
+        console.warn('Could not load viewers:', e);
+      }
+    }
+
+    document.getElementById('viewerSelect').addEventListener('change', (e) => {
+      selectedViewerId = e.target.value;
+    });
+
+    // ── Load room name from theme ────────────────────────────────
+    document.addEventListener('themeloaded', (e) => {
+      const theme = e.detail;
+      if (theme.room && theme.room.name) {
+        roomName = theme.room.name;
+        document.getElementById('boardTitle').textContent = roomName;
+      }
+    });
+
+    // ── Presence event handlers ──────────────────────────────────
+    heat.on('presence_join', (e) => {
+      const msg = e.detail;
+      addOrUpdateMember(msg.userId, msg.status, msg.identity, true);
+      logChat(`${msg.identity.displayName} joined as ${msg.status}`, 'presence');
+    });
+
+    heat.on('presence_update', (e) => {
+      const msg = e.detail;
+      addOrUpdateMember(msg.userId, msg.status, msg.identity, false);
+      logChat(`${msg.identity.displayName} → ${msg.status}`, 'presence');
+    });
+
+    heat.on('presence_state', (e) => {
+      const msg = e.detail;
+      members.clear();
+      for (const m of msg.members) {
+        addOrUpdateMember(m.userId, m.status, m.identity, false);
+      }
+      logChat(`Hydrated ${msg.members.length} members`, 'system');
+    });
+
+    heat.on('system', (e) => {
+      const msg = e.detail;
+      // Show announcement for join/leave messages (skip connection messages)
+      if (msg.message && !msg.message.startsWith('Connected to') && !msg.message.startsWith('You are') && !msg.message.startsWith("You haven't")) {
+        showAnnouncement(msg.message);
+      }
+      logChat(msg.message, 'system');
+    });
+
+    // ── Board rendering ──────────────────────────────────────────
+    function addOrUpdateMember(userId, status, identity, isNew) {
+      members.set(userId, { status, identity });
+      renderBoard();
+
+      if (isNew) {
+        // Highlight new arrival
+        const row = document.querySelector(`[data-user-id="${userId}"]`);
+        if (row) row.classList.add('new-arrival');
+      }
+    }
+
+    function renderBoard() {
+      const presentList = document.getElementById('presentList');
+      const lurkingList = document.getElementById('lurkingList');
+      const presentMembers = [];
+      const lurkingMembers = [];
+
+      for (const [userId, data] of members) {
+        if (data.status === 'present') presentMembers.push({ userId, ...data });
+        else lurkingMembers.push({ userId, ...data });
+      }
+
+      presentList.innerHTML = presentMembers.length
+        ? presentMembers.map(m => memberHTML(m, 'present')).join('')
+        : '<div class="empty-state">No one here yet</div>';
+
+      lurkingList.innerHTML = lurkingMembers.length
+        ? lurkingMembers.map(m => memberHTML(m, 'lurking')).join('')
+        : '<div class="empty-state">No lurkers</div>';
+
+      document.getElementById('presentCount').textContent = presentMembers.length;
+      document.getElementById('lurkingCount').textContent = lurkingMembers.length;
+      document.getElementById('boardCount').textContent =
+        `${presentMembers.length + lurkingMembers.length} members`;
+    }
+
+    function memberHTML(m, status) {
+      const imgSrc = m.identity.profileImageUrl || 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="' + (m.identity.color || '#555') + '"/><text x="16" y="21" text-anchor="middle" fill="#fff" font-size="14">?</text></svg>'
+      );
+      return `<div class="member-row ${status}" data-user-id="${m.userId}" style="--member-color: ${m.identity.color}">
+        <img class="member-avatar" src="${imgSrc}" alt="" />
+        <span class="member-name">${m.identity.displayName}</span>
+      </div>`;
+    }
+
+    // ── GSAP Announcement ────────────────────────────────────────
+    function showAnnouncement(text) {
+      const el = document.getElementById('announcement');
+      el.textContent = '';
+
+      // Create individual letter spans
+      const letters = text.split('').map(ch => {
+        const span = document.createElement('span');
+        span.textContent = ch;
+        span.style.opacity = '0';
+        span.style.display = 'inline-block';
+        el.appendChild(span);
+        return span;
+      });
+
+      const tl = gsap.timeline();
+      tl.to(el, { opacity: 1, duration: 0.2 });
+      tl.to(letters, {
+        opacity: 1,
+        duration: 0.03,
+        stagger: 0.03,
+        ease: 'none',
+      });
+      tl.to(el, { opacity: 0, duration: 0.5, delay: 2.5 });
+    }
+
+    // ── Bullseye interaction ─────────────────────────────────────
+    const bullseye = document.getElementById('bullseye');
+    const orbitals = document.getElementById('orbitalOptions');
+    const container = document.getElementById('bullseyeContainer');
+
+    bullseye.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (bullseyeExpanded) {
+        collapseBullseye();
+      } else {
+        expandBullseye();
+      }
+    });
+
+    function expandBullseye() {
+      bullseyeExpanded = true;
+      orbitals.classList.add('expanded');
+      gsap.fromTo(orbitals, { scale: 0.5 }, { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(2)' });
+      // Auto-collapse after 3 seconds
+      if (collapseTimer) clearTimeout(collapseTimer);
+      collapseTimer = setTimeout(collapseBullseye, 3000);
+    }
+
+    function collapseBullseye() {
+      bullseyeExpanded = false;
+      gsap.to(orbitals, { scale: 0.5, opacity: 0, duration: 0.2, onComplete: () => orbitals.classList.remove('expanded') });
+      if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
+    }
+
+    document.getElementById('btnPresent').addEventListener('click', (e) => {
+      e.stopPropagation();
+      heat.sendPresence('present', selectedViewerId);
+      collapseBullseye();
+    });
+
+    document.getElementById('btnLurk').addEventListener('click', (e) => {
+      e.stopPropagation();
+      heat.sendPresence('lurking', selectedViewerId);
+      collapseBullseye();
+    });
+
+    // Close on outside click
+    document.addEventListener('click', () => {
+      if (bullseyeExpanded) collapseBullseye();
+    });
+
+    // ── Drag bullseye ────────────────────────────────────────────
+    let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+
+    container.addEventListener('mousedown', (e) => {
+      if (e.target === bullseye || e.target === container) {
+        isDragging = true;
+        container.classList.add('dragging');
+        const rect = container.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      container.style.right = 'auto';
+      container.style.bottom = 'auto';
+      container.style.left = (e.clientX - dragOffsetX) + 'px';
+      container.style.top = (e.clientY - dragOffsetY) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      container.classList.remove('dragging');
+    });
+
+    // ── Simulated Chat ───────────────────────────────────────────
+    const chatInput = document.getElementById('chatInput');
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && chatInput.value.trim()) {
+        const text = chatInput.value.trim();
+        heat.sendChat(text, selectedViewerId);
+        logChat(`[${document.getElementById('viewerSelect').selectedOptions[0]?.textContent || 'You'}]: ${text}`, 'chat');
+        chatInput.value = '';
+      }
+    });
+
+    function logChat(text, type) {
+      const log = document.getElementById('chatLog');
+      const div = document.createElement('div');
+      div.className = 'msg-' + type;
+      div.textContent = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ── Init ─────────────────────────────────────────────────────
+    loadViewers();
+  </script>
+</body>
+</html>

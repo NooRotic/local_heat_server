@@ -104,6 +104,58 @@ class HeatClient extends EventTarget {
   }
 
   /**
+   * Send a presence join/update to the server
+   * @param {'present' | 'lurking'} status - Desired presence status
+   * @param {string} [userId] - Optional user ID
+   */
+  sendPresence(status, userId) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.log('⚠️ Not connected to server');
+      return false;
+    }
+
+    const presenceData = {
+      type: 'presence_join',
+      userId: userId || undefined,
+      status: status,
+    };
+
+    try {
+      this.ws.send(JSON.stringify(presenceData));
+      return true;
+    } catch (error) {
+      this.log('❌ Failed to send presence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send a simulated chat message to the server (LHS testing)
+   * @param {string} text - Chat message text
+   * @param {string} [userId] - Optional user ID
+   */
+  sendChat(text, userId) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.log('⚠️ Not connected to server');
+      return false;
+    }
+
+    const chatData = {
+      type: 'chat',
+      userId: userId || undefined,
+      text: text,
+    };
+
+    try {
+      this.ws.send(JSON.stringify(chatData));
+      return true;
+    } catch (error) {
+      this.log('❌ Failed to send chat:', error);
+      return false;
+    }
+  }
+
+  /**
    * Handle incoming WebSocket message
    */
   handleMessage(data) {
@@ -118,6 +170,10 @@ class HeatClient extends EventTarget {
         if (this.options.debugMode) {
           this.log(`🖱️ Click from ${message.id} at (${message.x}, ${message.y})`);
         }
+      } else if (message.type === 'presence_join' || message.type === 'presence_update') {
+        this.log(`🏛️ ${message.identity?.displayName || message.userId} → ${message.status}`);
+      } else if (message.type === 'presence_state') {
+        this.log(`🏛️ Presence hydration: ${message.members.length} members`);
       }
     } catch (error) {
       this.log('❌ Failed to parse message:', error);

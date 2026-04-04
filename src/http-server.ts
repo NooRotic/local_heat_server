@@ -4,6 +4,7 @@ import { join, extname } from 'path';
 import { config } from './config.js';
 import { ThemeManager } from './theme-manager.js';
 import { IdentityResolver } from './identity.js';
+import { PresenceManager } from './presence.js';
 
 /**
  * HTTP server for serving demo pages and theme API
@@ -13,11 +14,13 @@ export class HttpServer {
   private publicDir: string;
   private themeManager: ThemeManager;
   private identityResolver: IdentityResolver;
+  private presenceManager: PresenceManager;
 
-  constructor(publicDir: string = './public', identityResolver?: IdentityResolver) {
+  constructor(publicDir: string = './public', identityResolver?: IdentityResolver, presenceManager?: PresenceManager) {
     this.publicDir = publicDir;
     this.themeManager = new ThemeManager();
     this.identityResolver = identityResolver || new IdentityResolver();
+    this.presenceManager = presenceManager || new PresenceManager();
     this.server = createServer(this.handleRequest.bind(this));
   }
 
@@ -68,6 +71,12 @@ export class HttpServer {
       return;
     }
 
+    // Presence API routes
+    if (url === '/api/presence') {
+      this.handlePresenceState(res);
+      return;
+    }
+
     // Static file serving
     await this.serveStatic(url, res);
   }
@@ -93,6 +102,16 @@ export class HttpServer {
     const viewers = this.identityResolver.getViewers();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ viewers }));
+  }
+
+  /**
+   * GET /api/presence — return current presence state
+   */
+  private handlePresenceState(res: ServerResponse): void {
+    const state = this.presenceManager.getState();
+    const counts = this.presenceManager.getCounts();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ...state, counts, roomName: this.presenceManager.getRoomName() }));
   }
 
   /**

@@ -69,6 +69,17 @@ export interface PresenceStateMessage {
 }
 
 /**
+ * Server-side presence entry for a viewer in the Champagne Room
+ */
+export interface PresenceEntry {
+  userId: string;
+  status: 'present' | 'lurking';
+  identity: IdentityResponse;
+  joinedAt: number;
+  lastActivity: number;
+}
+
+/**
  * HeatVote message: a vote session has started
  */
 export interface HeatVoteStartMessage {
