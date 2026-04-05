@@ -91,12 +91,18 @@ export class HttpServer {
       await this.handleTargetsCollection(req, res);
       return;
     }
-    const targetMatch = url.match(/^\/api\/targets\/([^/]+)(\/toggle)?$/);
+    if (url === '/api/targets/hitcounts') {
+      await this.handleHitCounts(req, res);
+      return;
+    }
+    const targetMatch = url.match(/^\/api\/targets\/([^/]+)(\/toggle|\/hitcount)?$/);
     if (targetMatch) {
       const targetName = decodeURIComponent(targetMatch[1]);
-      const isToggle = !!targetMatch[2];
-      if (isToggle) {
+      const suffix = targetMatch[2];
+      if (suffix === '/toggle') {
         await this.handleTargetToggle(req, targetName, res);
+      } else if (suffix === '/hitcount') {
+        await this.handleTargetHitCount(req, targetName, res);
       } else {
         await this.handleTargetItem(req, targetName, res);
       }
@@ -174,6 +180,53 @@ export class HttpServer {
       return;
     }
 
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  }
+
+  /**
+   * GET /api/targets/hitcounts — return all hit counts as {targetName: count}
+   * DELETE /api/targets/hitcounts — reset all counts to zero
+   */
+  private async handleHitCounts(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method === 'GET') {
+      const counts = this.targetManager.getAllHitCounts();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ counts }));
+      return;
+    }
+    if (req.method === 'DELETE') {
+      this.targetManager.resetAllHitCounts();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ reset: true }));
+      return;
+    }
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  }
+
+  /**
+   * GET /api/targets/:name/hitcount — single target's hit count
+   * DELETE /api/targets/:name/hitcount — reset this target's count
+   */
+  private async handleTargetHitCount(req: IncomingMessage, name: string, res: ServerResponse): Promise<void> {
+    if (!this.targetManager.get(name)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Target not found: ${name}` }));
+      return;
+    }
+    if (req.method === 'GET') {
+      const count = this.targetManager.getHitCount(name);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ name, count }));
+      return;
+    }
+    if (req.method === 'DELETE') {
+      const old = this.targetManager.resetHitCount(name);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ name, reset: true, previousCount: old }));
+      return;
+    }
     res.writeHead(405);
     res.end('Method Not Allowed');
   }
