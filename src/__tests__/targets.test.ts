@@ -1046,4 +1046,213 @@ describe('ClickTargetManager', () => {
       expect(list2).toHaveLength(1); // Original unaffected
     });
   });
+
+  // ===== hit count tracking =====
+  describe('hit count tracking', () => {
+    beforeEach(() => {
+      // Reset targetA.enabled in case previous tests modified it
+      targetA.enabled = true;
+    });
+
+    it('should be using the updated source file', () => {
+      // This test verifies we're using the correct source version
+      expect(typeof manager.incrementHit).toBe('function');
+      expect(typeof manager.getHitCount).toBe('function');
+    });
+
+    it('should have incrementHit method', () => {
+      expect(typeof manager.incrementHit).toBe('function');
+      // Check that hitTest actually calls incrementHit by looking at the method
+      const hitTestCode = manager.hitTest.toString();
+      expect(hitTestCode).toContain('incrementHit');
+    });
+
+    it('should have getHitCount method', () => {
+      expect(typeof manager.getHitCount).toBe('function');
+    });
+
+    it('should have getAllHitCounts method', () => {
+      expect(typeof manager.getAllHitCounts).toBe('function');
+    });
+
+    it('should have resetHitCount method', () => {
+      expect(typeof manager.resetHitCount).toBe('function');
+    });
+
+    it('should have resetAllHitCounts method', () => {
+      expect(typeof manager.resetAllHitCounts).toBe('function');
+    });
+
+    it('should return 0 for targets that have never been hit', () => {
+      manager.upsert(targetA);
+      expect(manager.getHitCount('webcam')).toBe(0);
+    });
+
+    it('should return 0 for non-existent targets (no throw)', () => {
+      expect(manager.getHitCount('does_not_exist')).toBe(0);
+    });
+
+    it('incrementHit() increments and returns new count', () => {
+      const count1 = manager.incrementHit('test_target');
+      expect(count1).toBe(1);
+    });
+
+    it('incrementHit() works for targets that do not exist in target list', () => {
+      // Hit counts are decoupled from target existence
+      const count = manager.incrementHit('non_existent');
+      expect(count).toBe(1);
+      expect(manager.getHitCount('non_existent')).toBe(1);
+    });
+
+    it('incrementHit() multiple times stacks correctly', () => {
+      expect(manager.incrementHit('counter')).toBe(1);
+      expect(manager.incrementHit('counter')).toBe(2);
+      expect(manager.incrementHit('counter')).toBe(3);
+      expect(manager.getHitCount('counter')).toBe(3);
+    });
+
+    it('hitTest() auto-increments matched targets', () => {
+      manager.upsert(targetA);
+      const countBefore = manager.getHitCount('webcam');
+      expect(countBefore).toBe(0);
+
+      const results = manager.hitTest(0.85, 0.80); // Hit targetA
+      expect(results.length).toBe(1); // Verify the hit happened
+
+      const countAfter = manager.getHitCount('webcam');
+      // This should be 1 if hitTest auto-increments
+      expect(countAfter).toBe(1);
+
+      const results2 = manager.hitTest(0.85, 0.80); // Hit again
+      const count2 = manager.getHitCount('webcam');
+      expect(count2).toBe(2);
+    });
+
+    it('hitTest() with miss does NOT increment', () => {
+      manager.upsert(targetA);
+      manager.hitTest(0.1, 0.1); // Miss
+      expect(manager.getHitCount('webcam')).toBe(0);
+    });
+
+    it('hitTest() with 2 matching targets increments BOTH counts', () => {
+      manager.upsert(targetA);
+      manager.upsert(overlapping); // overlapping covers entire screen
+
+      manager.hitTest(0.85, 0.80); // Hits both webcam and overlay
+      expect(manager.getHitCount('webcam')).toBe(1);
+      expect(manager.getHitCount('overlay')).toBe(1);
+
+      manager.hitTest(0.85, 0.80); // Hit both again
+      expect(manager.getHitCount('webcam')).toBe(2);
+      expect(manager.getHitCount('overlay')).toBe(2);
+    });
+
+    it('hitTest() with disabled target does NOT increment it', () => {
+      const disabled: ClickTarget = { ...targetA, enabled: false };
+      manager.upsert(disabled);
+
+      // Even though the bounds would be hit, disabled targets are skipped
+      manager.hitTest(0.85, 0.80);
+      expect(manager.getHitCount('webcam')).toBe(0);
+    });
+
+    it('getAllHitCounts() returns entry for every target (even 0-count)', () => {
+      manager.upsert(targetA);
+      manager.upsert(targetB);
+
+      const counts = manager.getAllHitCounts();
+      expect(counts).toHaveProperty('webcam');
+      expect(counts).toHaveProperty('alert');
+      expect(counts['webcam']).toBe(0);
+      expect(counts['alert']).toBe(0);
+    });
+
+    it('getAllHitCounts() returns empty object when no targets', () => {
+      const counts = manager.getAllHitCounts();
+      expect(counts).toEqual({});
+    });
+
+    it('getAllHitCounts() correctly reflects counts after multiple hits', () => {
+      manager.upsert(targetA);
+      manager.upsert(targetB);
+      manager.upsert(overlapping);
+
+      // Hit targetA 2x
+      manager.hitTest(0.85, 0.80); // Hits webcam + overlay
+      manager.hitTest(0.85, 0.80);
+
+      // Hit targetB 3x
+      manager.hitTest(0.15, 0.075); // Hits alert + overlay
+      manager.hitTest(0.15, 0.075);
+      manager.hitTest(0.15, 0.075);
+
+      const counts = manager.getAllHitCounts();
+      expect(counts['webcam']).toBe(2);
+      expect(counts['alert']).toBe(3);
+      expect(counts['overlay']).toBe(5); // Hit 2x from webcam tests + 3x from alert tests
+    });
+
+    it('resetHitCount() returns previous count and sets to 0', () => {
+      manager.incrementHit('target');
+      manager.incrementHit('target');
+      manager.incrementHit('target');
+
+      const old = manager.resetHitCount('target');
+      expect(old).toBe(3);
+      expect(manager.getHitCount('target')).toBe(0);
+    });
+
+    it('resetHitCount() on never-hit target returns 0', () => {
+      const old = manager.resetHitCount('never_hit');
+      expect(old).toBe(0);
+      expect(manager.getHitCount('never_hit')).toBe(0);
+    });
+
+    it('resetAllHitCounts() sets every count to 0 (does not remove entries)', () => {
+      manager.upsert(targetA);
+      manager.upsert(targetB);
+
+      manager.incrementHit('webcam');
+      manager.incrementHit('webcam');
+      manager.incrementHit('alert');
+
+      manager.resetAllHitCounts();
+
+      expect(manager.getHitCount('webcam')).toBe(0);
+      expect(manager.getHitCount('alert')).toBe(0);
+      // getAllHitCounts() still returns entries for both targets
+      const counts = manager.getAllHitCounts();
+      expect(counts).toHaveProperty('webcam');
+      expect(counts).toHaveProperty('alert');
+    });
+
+    it('remove() deletes hit count for removed target', () => {
+      manager.upsert(targetA);
+      manager.incrementHit('webcam');
+      manager.incrementHit('webcam');
+
+      expect(manager.getHitCount('webcam')).toBe(2);
+      manager.remove('webcam');
+      expect(manager.getHitCount('webcam')).toBe(0); // Hit count cleared
+
+      // getAllHitCounts() no longer includes the removed target
+      const counts = manager.getAllHitCounts();
+      expect(counts).not.toHaveProperty('webcam');
+    });
+
+    it('clear() empties hit counts along with targets', () => {
+      manager.upsert(targetA);
+      manager.upsert(targetB);
+      manager.incrementHit('webcam');
+      manager.incrementHit('alert');
+      manager.incrementHit('alert');
+
+      manager.clear();
+
+      expect(manager.getHitCount('webcam')).toBe(0);
+      expect(manager.getHitCount('alert')).toBe(0);
+      const counts = manager.getAllHitCounts();
+      expect(counts).toEqual({});
+    });
+  });
 });

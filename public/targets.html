@@ -1,0 +1,2226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Target Designer — Local Heat Server</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="/theme-loader.js"></script>
+  <script src="/heat-client.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --panel-width: 320px;
+      --topbar-height: 52px;
+      --default-target-color: #00ff88;
+    }
+
+    body {
+      font-family: var(--font-body, 'Courier New', monospace);
+      background: var(--color-background, #0a0a0a);
+      color: var(--color-text, #fff);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ── Top status bar ─────────────────────────────────────── */
+    #topbar {
+      height: var(--topbar-height);
+      background: rgba(10,10,10,0.95);
+      border-bottom: 1px solid var(--color-border, #004400);
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      height: 100%;
+    }
+
+    .topbar-back {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-text-muted, #77777d);
+      text-decoration: none;
+      padding: 5px 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .topbar-back:hover {
+      color: var(--color-primary, #00ff88);
+      border-color: var(--color-primary, #00ff88);
+    }
+
+    .topbar-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 16px #00ff88);
+    }
+
+    .topbar-modes {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 16px;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      height: 100%;
+    }
+
+    .mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mode-btn:hover {
+      color: #fff;
+      border-color: rgba(255,255,255,0.25);
+    }
+    .mode-btn.active {
+      border-color: var(--color-primary, #00ff88);
+      color: var(--color-primary, #00ff88);
+      background: rgba(0,255,136,0.07);
+      box-shadow: 0 0 12px rgba(0,255,136,0.15);
+    }
+    .mode-btn .kbd {
+      font-size: 8px;
+      opacity: 0.55;
+      background: rgba(255,255,255,0.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    .topbar-conn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      margin-left: auto;
+    }
+
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-status-disconnected, #ff4444);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .conn-dot.connected {
+      background: var(--color-status-connected, #00ff88);
+      box-shadow: 0 0 8px var(--color-status-connected, #00ff88);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 8px var(--color-status-connected, #00ff88); }
+      50%       { box-shadow: 0 0 3px var(--color-status-connected, #00ff88); }
+    }
+
+    .conn-label {
+      font-size: 10px;
+      color: var(--color-text-muted, #77777d);
+      letter-spacing: 0.08em;
+    }
+
+    .topbar-help-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-right: 8px;
+    }
+    .topbar-help-btn:hover {
+      border-color: var(--color-accent, #ff6b35);
+      color: var(--color-accent, #ff6b35);
+      box-shadow: 0 0 10px rgba(255,107,53,0.3);
+    }
+
+    .topbar-grid-btn {
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 4px;
+    }
+    .topbar-grid-btn.active {
+      color: var(--color-accent, #ff6b35);
+      border-color: var(--color-accent, #ff6b35);
+    }
+
+    /* ── Main layout ────────────────────────────────────────── */
+    #main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Canvas area ────────────────────────────────────────── */
+    #canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-background, #0a0a0a);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Scanlines overlay */
+    #canvas-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.07) 3px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* 16:9 stream preview */
+    #stream-preview {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-width: 1600px;
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 20px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* Grid overlay */
+    #grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 1;
+      transition: opacity 0.3s;
+    }
+    #grid-overlay.hidden { opacity: 0; }
+
+    .grid-line {
+      position: absolute;
+      background: rgba(255,255,255,0.04);
+    }
+    .grid-line.vertical {
+      top: 0; bottom: 0;
+      width: 1px;
+    }
+    .grid-line.horizontal {
+      left: 0; right: 0;
+      height: 1px;
+    }
+    .grid-label {
+      position: absolute;
+      font-size: 8px;
+      color: rgba(255,255,255,0.15);
+      font-family: 'Courier New', monospace;
+      pointer-events: none;
+    }
+    .grid-label.top { top: 3px; transform: translateX(-50%); }
+    .grid-label.left { left: 3px; transform: translateY(-50%); }
+
+    /* Target rectangles */
+    #target-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .target-rect {
+      position: absolute;
+      border: 2px dashed var(--tc, #00ff88);
+      background: color-mix(in srgb, var(--tc, #00ff88) 8%, transparent);
+      box-shadow:
+        inset 0 0 20px color-mix(in srgb, var(--tc, #00ff88) 6%, transparent),
+        0 0 8px color-mix(in srgb, var(--tc, #00ff88) 12%, transparent);
+      cursor: pointer;
+      transition: opacity 0.2s;
+      overflow: visible;
+    }
+    .target-rect.disabled { opacity: 0.4; }
+    .target-rect.selected {
+      border-style: solid;
+      border-width: 2px;
+      box-shadow:
+        0 0 0 1px var(--tc, #00ff88),
+        inset 0 0 20px color-mix(in srgb, var(--tc, #00ff88) 12%, transparent),
+        0 0 20px color-mix(in srgb, var(--tc, #00ff88) 30%, transparent);
+    }
+    .target-rect.hit-flash {
+      animation: target-hit-flash 0.6s ease-out;
+    }
+
+    @keyframes target-hit-flash {
+      0%   { box-shadow: 0 0 0 3px var(--tc, #00ff88), 0 0 40px var(--tc, #00ff88), inset 0 0 30px color-mix(in srgb, var(--tc, #00ff88) 40%, transparent); }
+      100% { box-shadow: inset 0 0 20px color-mix(in srgb, var(--tc, #00ff88) 6%, transparent), 0 0 8px color-mix(in srgb, var(--tc, #00ff88) 12%, transparent); }
+    }
+
+    .target-label {
+      position: absolute;
+      top: 5px;
+      left: 7px;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--tc, #00ff88);
+      text-shadow: 0 0 8px var(--tc, #00ff88);
+      white-space: nowrap;
+      pointer-events: none;
+      line-height: 1.3;
+    }
+    .target-count-badge {
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 7px;
+      opacity: 0.7;
+      background: rgba(0,0,0,0.5);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* Resize handles */
+    .resize-handle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--tc, #00ff88);
+      border: 1px solid rgba(0,0,0,0.5);
+      border-radius: 1px;
+      z-index: 10;
+      box-shadow: 0 0 6px var(--tc, #00ff88);
+    }
+    .resize-handle[data-dir="nw"] { top: -4px; left: -4px; cursor: nw-resize; }
+    .resize-handle[data-dir="n"]  { top: -4px; left: calc(50% - 4px); cursor: n-resize; }
+    .resize-handle[data-dir="ne"] { top: -4px; right: -4px; cursor: ne-resize; }
+    .resize-handle[data-dir="e"]  { top: calc(50% - 4px); right: -4px; cursor: e-resize; }
+    .resize-handle[data-dir="se"] { bottom: -4px; right: -4px; cursor: se-resize; }
+    .resize-handle[data-dir="s"]  { bottom: -4px; left: calc(50% - 4px); cursor: s-resize; }
+    .resize-handle[data-dir="sw"] { bottom: -4px; left: -4px; cursor: sw-resize; }
+    .resize-handle[data-dir="w"]  { top: calc(50% - 4px); left: -4px; cursor: w-resize; }
+
+    /* Draw preview */
+    #draw-preview {
+      position: absolute;
+      border: 2px dashed rgba(255,255,255,0.8);
+      background: rgba(255,255,255,0.05);
+      pointer-events: none;
+      z-index: 5;
+      display: none;
+    }
+
+    /* Dimension readout */
+    #dim-readout {
+      position: absolute;
+      bottom: -22px;
+      right: 0;
+      font-size: 9px;
+      font-family: 'Courier New', monospace;
+      color: rgba(255,255,255,0.6);
+      background: rgba(0,0,0,0.7);
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Test mode cursor */
+    #stream-preview.mode-test { cursor: crosshair; }
+    #stream-preview.mode-draw { cursor: crosshair; }
+    #stream-preview.mode-select { cursor: default; }
+
+    /* Hit pill */
+    .hit-pill {
+      position: absolute;
+      background: rgba(10,10,10,0.92);
+      border: 1px solid var(--tc, #00ff88);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--tc, #00ff88);
+      text-shadow: 0 0 8px var(--tc, #00ff88);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--tc, #00ff88) 25%, transparent);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 20;
+    }
+
+    /* ── Side panel ─────────────────────────────────────────── */
+    #side-panel {
+      width: var(--panel-width);
+      flex-shrink: 0;
+      background: rgba(10,10,10,0.95);
+      border-left: 1px solid var(--color-border, #004400);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .panel-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 16px #00ff88);
+    }
+
+    .panel-subtitle {
+      font-size: 10px;
+      color: var(--color-text-muted, #77777d);
+      margin-top: 3px;
+    }
+
+    #target-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    #target-list::-webkit-scrollbar { width: 4px; }
+    #target-list::-webkit-scrollbar-track { background: transparent; }
+    #target-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    .target-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .target-item:hover { background: rgba(255,255,255,0.03); }
+    .target-item.selected { background: rgba(0,255,136,0.05); border-left: 2px solid var(--item-color, #00ff88); }
+    .target-item.disabled { opacity: 0.45; }
+
+    .target-item-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .item-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .item-names {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .item-display-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text, #fff);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-slug {
+      font-size: 9px;
+      color: var(--color-text-muted, #77777d);
+      font-family: 'Courier New', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-type-badge {
+      font-family: 'Orbitron', monospace;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 10px;
+      border: 1px solid;
+      flex-shrink: 0;
+    }
+    .badge-counter { color: #ffaa00; border-color: rgba(255,170,0,0.4); background: rgba(255,170,0,0.08); }
+    .badge-custom  { color: #a855f7; border-color: rgba(168,85,247,0.4); background: rgba(168,85,247,0.08); }
+
+    .target-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .item-hit-count {
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      color: var(--color-text-muted, #77777d);
+      letter-spacing: 0.08em;
+      flex: 1;
+    }
+    .item-hit-count span { color: var(--item-color, #00ff88); }
+
+    .item-btn {
+      width: 26px;
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .item-btn:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+    .item-btn.danger:hover { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.08); }
+    .item-btn.reset:hover  { border-color: #ffaa00; color: #ffaa00; background: rgba(255,170,0,0.08); }
+
+    .item-toggle {
+      display: flex;
+      align-items: center;
+    }
+
+    .toggle-switch {
+      width: 32px;
+      height: 16px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-switch.on {
+      background: rgba(0,255,136,0.2);
+      border-color: #00ff88;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch.on::after {
+      transform: translateX(16px);
+      background: #00ff88;
+      box-shadow: 0 0 6px #00ff88;
+    }
+
+    .panel-footer {
+      padding: 12px 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .footer-stats {
+      font-size: 10px;
+      color: var(--color-text-muted, #77777d);
+      margin-bottom: 8px;
+      font-family: 'Orbitron', monospace;
+      letter-spacing: 0.08em;
+    }
+    .footer-stats span { color: var(--color-primary, #00ff88); }
+
+    .footer-btn {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .footer-btn:hover {
+      border-color: #ffaa00;
+      color: #ffaa00;
+      background: rgba(255,170,0,0.07);
+    }
+
+    .empty-panel {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--color-text-muted, #77777d);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+    .empty-panel-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      opacity: 0.3;
+    }
+
+    /* ── Create / Edit Modal ────────────────────────────────── */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      backdrop-filter: blur(3px);
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: rgba(12,14,12,0.98);
+      border: 1px solid var(--color-border, #004400);
+      border-top: 2px solid var(--color-primary, #00ff88);
+      border-radius: 0 0 12px 12px;
+      width: 380px;
+      max-width: 95vw;
+      box-shadow:
+        0 0 0 1px rgba(0,255,136,0.08),
+        0 20px 60px rgba(0,0,0,0.8),
+        0 0 40px rgba(0,255,136,0.05);
+      position: relative;
+    }
+
+    /* Position modal near draw rect */
+    #modal.positioned {
+      position: fixed;
+      top: auto;
+      margin: 0;
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 16px #00ff88);
+    }
+
+    .modal-close {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--color-text-muted, #77777d);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { border-color: #ff4444; color: #ff4444; }
+
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-row-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--color-text-muted, #77777d);
+    }
+
+    .form-input, .form-select {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: var(--color-text, #fff);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 8px 10px;
+      width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--color-primary, #00ff88);
+      box-shadow: 0 0 0 2px rgba(0,255,136,0.1);
+    }
+    .form-input.error {
+      border-color: #ff4444;
+      box-shadow: 0 0 0 2px rgba(255,68,68,0.1);
+    }
+
+    .form-select option {
+      background: #0f1210;
+      color: #fff;
+    }
+
+    .form-input[type="color"] {
+      padding: 4px 6px;
+      height: 36px;
+      cursor: pointer;
+    }
+
+    .form-hint {
+      font-size: 9px;
+      color: var(--color-text-muted, #77777d);
+      line-height: 1.4;
+    }
+    .form-hint.warn {
+      color: #ffaa00;
+    }
+
+    .modal-error {
+      padding: 8px 12px;
+      background: rgba(255,68,68,0.1);
+      border: 1px solid rgba(255,68,68,0.3);
+      border-radius: 6px;
+      font-size: 11px;
+      color: #ff6666;
+      display: none;
+    }
+    .modal-error.visible { display: block; }
+
+    .modal-footer {
+      padding: 14px 18px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      border: 1px solid;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel {
+      background: transparent;
+      border-color: rgba(255,255,255,0.12);
+      color: var(--color-text-muted, #77777d);
+    }
+    .btn-cancel:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: #fff;
+    }
+    .btn-primary {
+      background: rgba(0,255,136,0.12);
+      border-color: var(--color-primary, #00ff88);
+      color: var(--color-primary, #00ff88);
+    }
+    .btn-primary:hover {
+      background: rgba(0,255,136,0.2);
+      box-shadow: 0 0 14px rgba(0,255,136,0.25);
+    }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── Toast notifications ────────────────────────────────── */
+    #toast-stack {
+      position: fixed;
+      top: calc(var(--topbar-height) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid;
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+      opacity: 0;
+    }
+    .toast-success {
+      background: rgba(0,255,136,0.1);
+      border-color: rgba(0,255,136,0.4);
+      color: #00ff88;
+      text-shadow: 0 0 8px #00ff88;
+    }
+    .toast-error {
+      background: rgba(255,68,68,0.1);
+      border-color: rgba(255,68,68,0.4);
+      color: #ff6666;
+    }
+    .toast-warn {
+      background: rgba(255,170,0,0.1);
+      border-color: rgba(255,170,0,0.4);
+      color: #ffaa00;
+    }
+    .toast-info {
+      background: rgba(168,85,247,0.1);
+      border-color: rgba(168,85,247,0.4);
+      color: #a855f7;
+    }
+
+    /* ── Server warning banner ──────────────────────────────── */
+    #server-warn {
+      position: fixed;
+      top: var(--topbar-height);
+      left: 0; right: 0;
+      background: rgba(255,68,68,0.12);
+      border-bottom: 1px solid rgba(255,68,68,0.4);
+      padding: 8px 16px;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #ff6666;
+      text-align: center;
+      z-index: 500;
+      display: none;
+    }
+    #server-warn.visible { display: block; }
+
+    /* ── Help overlay ───────────────────────────────────────── */
+    #help-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    #help-overlay.open { display: flex; }
+
+    .help-box {
+      background: rgba(10,14,10,0.98);
+      border: 1px solid var(--color-border, #004400);
+      border-top: 2px solid var(--color-primary, #00ff88);
+      border-radius: 0 0 14px 14px;
+      width: 500px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      padding: 0;
+    }
+
+    .help-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .help-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-primary, #00ff88);
+      text-shadow: var(--glow-text, 0 0 16px #00ff88);
+    }
+
+    .help-close {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: #77777d;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .help-close:hover { border-color: #ff4444; color: #ff4444; }
+
+    .help-body {
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .help-section h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-accent, #ff6b35);
+      margin-bottom: 10px;
+    }
+
+    .help-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 11px;
+      color: var(--color-text-secondary, #adadb8);
+    }
+
+    .help-kbd {
+      font-family: 'Orbitron', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      padding: 2px 7px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: #fff;
+      flex-shrink: 0;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* ── Delete confirm dialog ──────────────────────────────── */
+    #confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 4000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    #confirm-overlay.open { display: flex; }
+
+    .confirm-box {
+      background: rgba(14,10,10,0.98);
+      border: 1px solid rgba(255,68,68,0.3);
+      border-top: 2px solid #ff4444;
+      border-radius: 0 0 12px 12px;
+      width: 340px;
+      max-width: 95vw;
+      padding: 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
+
+    .confirm-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .confirm-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #ff4444;
+    }
+
+    .confirm-body {
+      padding: 16px 18px;
+      font-size: 12px;
+      color: var(--color-text-secondary, #adadb8);
+      line-height: 1.6;
+    }
+
+    .confirm-name {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .confirm-footer {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-danger {
+      background: rgba(255,68,68,0.12);
+      border-color: #ff4444;
+      color: #ff4444;
+    }
+    .btn-danger:hover {
+      background: rgba(255,68,68,0.22);
+      box-shadow: 0 0 14px rgba(255,68,68,0.25);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top status bar -->
+<div id="topbar">
+  <div class="topbar-brand">
+    <a href="/" class="topbar-back">&#8592; Back</a>
+    <div class="topbar-title">Target Designer</div>
+  </div>
+
+  <div class="topbar-modes">
+    <button class="mode-btn active" id="btn-draw" onclick="setMode('draw')" title="Draw mode (D)">
+      Draw <span class="kbd">D</span>
+    </button>
+    <button class="mode-btn" id="btn-select" onclick="setMode('select')" title="Select mode (S)">
+      Select <span class="kbd">S</span>
+    </button>
+    <button class="mode-btn" id="btn-test" onclick="setMode('test')" title="Test mode (T)">
+      Test <span class="kbd">T</span>
+    </button>
+  </div>
+
+  <div id="mode-hint" style="padding:0 14px;font-size:10px;color:var(--color-text-muted,#77777d);letter-spacing:0.06em;border-right:1px solid rgba(255,255,255,0.07);height:100%;display:flex;align-items:center;">
+    Click and drag to draw a target zone
+  </div>
+
+  <div class="topbar-conn" style="gap:6px;">
+    <button class="topbar-grid-btn active" id="grid-toggle" onclick="toggleGrid()">Grid</button>
+    <button class="topbar-help-btn" onclick="toggleHelp()">?</button>
+    <div class="conn-dot" id="conn-dot"></div>
+    <span class="conn-label" id="conn-label">Offline</span>
+  </div>
+</div>
+
+<!-- Server warning banner -->
+<div id="server-warn">Server unreachable — changes may not be saved</div>
+
+<!-- Main layout -->
+<div id="main">
+
+  <!-- Canvas area -->
+  <div id="canvas-area">
+    <div id="stream-preview" class="mode-draw">
+
+      <!-- Grid overlay -->
+      <div id="grid-overlay"></div>
+
+      <!-- Target rectangles -->
+      <div id="target-layer"></div>
+
+      <!-- Draw preview rectangle -->
+      <div id="draw-preview">
+        <div id="dim-readout"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div id="side-panel">
+    <div class="panel-header">
+      <div class="panel-title">Targets</div>
+      <div class="panel-subtitle" id="panel-subtitle">Loading...</div>
+    </div>
+
+    <div id="target-list"></div>
+
+    <div class="panel-footer">
+      <div class="footer-stats" id="footer-stats">
+        Total hits: <span id="total-hits">0</span>
+      </div>
+      <button class="footer-btn" onclick="resetAllCounts()">Reset All Hit Counts</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Create/Edit modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">New Target</div>
+      <button class="modal-close" onclick="closeModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-error" id="modal-error"></div>
+
+      <div class="form-row">
+        <label class="form-label">Display Name</label>
+        <input class="form-input" id="f-display-name" type="text" placeholder="e.g. Webcam" autocomplete="off" />
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Name (slug)</label>
+        <input class="form-input" id="f-name" type="text" placeholder="e.g. webcam" autocomplete="off" />
+        <div class="form-hint" id="f-name-hint"></div>
+      </div>
+
+      <div class="form-row-2col">
+        <div class="form-row">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="f-type">
+            <option value="counter">Counter (click count)</option>
+            <option value="custom">Custom (rich hit)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Color</label>
+          <input class="form-input" id="f-color" type="color" value="#00ff88" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">OBS Source Name <span style="opacity:0.5">(optional)</span></label>
+        <input class="form-input" id="f-source" type="text" placeholder="e.g. Webcam" autocomplete="off" />
+      </div>
+
+      <!-- Hidden bounds fields populated by draw -->
+      <input type="hidden" id="f-x" />
+      <input type="hidden" id="f-y" />
+      <input type="hidden" id="f-width" />
+      <input type="hidden" id="f-height" />
+      <input type="hidden" id="f-editing-name" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit" onclick="submitModal()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm dialog -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-header">
+      <div class="confirm-title">Delete Target</div>
+    </div>
+    <div class="confirm-body">
+      Delete <span class="confirm-name" id="confirm-name"></span>? This cannot be undone.
+    </div>
+    <div class="confirm-footer">
+      <button class="btn btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div id="help-overlay">
+  <div class="help-box">
+    <div class="help-header">
+      <div class="help-title">Keyboard Shortcuts</div>
+      <button class="help-close" onclick="toggleHelp()">&#215;</button>
+    </div>
+    <div class="help-body">
+      <div class="help-section">
+        <h3>Modes</h3>
+        <div class="help-row"><span class="help-kbd">D</span> Draw mode</div>
+        <div class="help-row"><span class="help-kbd">S</span> Select mode</div>
+        <div class="help-row"><span class="help-kbd">T</span> Test mode</div>
+        <div class="help-row"><span class="help-kbd">Esc</span> Deselect / close</div>
+        <div class="help-row"><span class="help-kbd">?</span> Toggle this help</div>
+      </div>
+      <div class="help-section">
+        <h3>Select Mode</h3>
+        <div class="help-row"><span class="help-kbd">Click</span> Select target</div>
+        <div class="help-row"><span class="help-kbd">Drag</span> Move target</div>
+        <div class="help-row"><span class="help-kbd">Handles</span> Resize target</div>
+        <div class="help-row"><span class="help-kbd">Del</span> Delete selected</div>
+        <div class="help-row"><span class="help-kbd">Dbl-click</span> Edit target</div>
+        <div class="help-row"><span class="help-kbd">G</span> Toggle grid</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-stack"></div>
+
+<script>
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────
+const API = 'http://localhost:7778';
+const HANDLE_DIRS = ['nw','n','ne','e','se','s','sw','w'];
+
+// ── State ──────────────────────────────────────────────────────────
+let targets = [];          // ClickTarget[]
+let hitCounts = {};        // { [name]: number }
+let currentMode = 'draw';
+let selectedName = null;
+let gridVisible = true;
+let heat = null;           // HeatClient instance (test mode)
+
+// Draw state
+let drawState = null;      // { startX, startY, normX, normY, normW, normH }
+
+// Select / drag / resize state
+let dragState = null;
+
+// ── DOM refs ───────────────────────────────────────────────────────
+const preview      = document.getElementById('stream-preview');
+const targetLayer  = document.getElementById('target-layer');
+const drawPreview  = document.getElementById('draw-preview');
+const dimReadout   = document.getElementById('dim-readout');
+const gridOverlay  = document.getElementById('grid-overlay');
+const modalOverlay = document.getElementById('modal-overlay');
+const confirmOvl   = document.getElementById('confirm-overlay');
+const helpOvl      = document.getElementById('help-overlay');
+const connDot      = document.getElementById('conn-dot');
+const connLabel    = document.getElementById('conn-label');
+
+// ── Utility ────────────────────────────────────────────────────────
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function toSlug(str) {
+  return str.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
+function previewToNorm(px, py) {
+  const r = preview.getBoundingClientRect();
+  return {
+    x: clamp((px - r.left) / r.width, 0, 1),
+    y: clamp((py - r.top)  / r.height, 0, 1),
+  };
+}
+
+function normToPercent(v) { return (v * 100).toFixed(1) + '%'; }
+function normToLabel(v)   { return v.toFixed(3); }
+
+// ── Grid ────────────────────────────────────────────────────────────
+function buildGrid() {
+  gridOverlay.innerHTML = '';
+  for (let i = 1; i < 10; i++) {
+    const v = document.createElement('div');
+    v.className = 'grid-line vertical';
+    v.style.left = (i * 10) + '%';
+    gridOverlay.appendChild(v);
+
+    const lv = document.createElement('div');
+    lv.className = 'grid-label top';
+    lv.style.left = (i * 10) + '%';
+    lv.textContent = '0.' + i;
+    gridOverlay.appendChild(lv);
+
+    const h = document.createElement('div');
+    h.className = 'grid-line horizontal';
+    h.style.top = (i * 10) + '%';
+    gridOverlay.appendChild(h);
+
+    const lh = document.createElement('div');
+    lh.className = 'grid-label left';
+    lh.style.top = (i * 10) + '%';
+    lh.textContent = '0.' + i;
+    gridOverlay.appendChild(lh);
+  }
+}
+
+function toggleGrid() {
+  gridVisible = !gridVisible;
+  gridOverlay.classList.toggle('hidden', !gridVisible);
+  document.getElementById('grid-toggle').classList.toggle('active', gridVisible);
+}
+
+// ── Mode management ────────────────────────────────────────────────
+function setMode(mode) {
+  if (currentMode === 'test' && mode !== 'test') teardownTestMode();
+  currentMode = mode;
+
+  document.getElementById('btn-draw').classList.toggle('active', mode === 'draw');
+  document.getElementById('btn-select').classList.toggle('active', mode === 'select');
+  document.getElementById('btn-test').classList.toggle('active', mode === 'test');
+
+  preview.className = 'mode-' + mode;
+
+  const hints = {
+    draw:   'Click and drag on the canvas to draw a target zone',
+    select: 'Click a target to select — drag to move — double-click to edit',
+    test:   'Click anywhere on the canvas to simulate a heat event',
+  };
+  document.getElementById('mode-hint').textContent = hints[mode];
+
+  if (mode !== 'select') deselectTarget();
+  if (mode === 'test') setupTestMode();
+}
+
+// ── Mode hint ──────────────────────────────────────────────────────
+const modeHints = {
+  draw:   'Click and drag on the canvas to draw a target zone',
+  select: 'Click a target to select — drag to move — double-click to edit',
+  test:   'Click anywhere on the canvas to simulate a heat event',
+};
+
+// ── API helpers ────────────────────────────────────────────────────
+let serverReachable = true;
+
+function setServerReachable(ok) {
+  if (ok === serverReachable) return;
+  serverReachable = ok;
+  document.getElementById('server-warn').classList.toggle('visible', !ok);
+}
+
+async function apiFetch(path, opts = {}) {
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+    });
+    setServerReachable(true);
+    return res;
+  } catch (e) {
+    setServerReachable(false);
+    throw e;
+  }
+}
+
+// ── Load targets ───────────────────────────────────────────────────
+async function loadTargets() {
+  try {
+    const [targetsRes, countsRes] = await Promise.all([
+      apiFetch('/api/targets'),
+      apiFetch('/api/targets/hitcounts'),
+    ]);
+    const targetsData = await targetsRes.json();
+    const countsData  = await countsRes.json();
+    targets = targetsData.targets || [];
+    hitCounts = countsData.counts || {};
+    renderAll();
+  } catch (e) {
+    console.warn('Failed to load targets:', e);
+    showToast('Failed to load targets', 'error');
+  }
+}
+
+// ── Render canvas rectangles ───────────────────────────────────────
+function renderAll() {
+  renderCanvasTargets();
+  renderSidePanel();
+}
+
+function renderCanvasTargets() {
+  targetLayer.innerHTML = '';
+  for (const t of targets) {
+    targetLayer.appendChild(buildTargetRect(t));
+  }
+}
+
+function buildTargetRect(t) {
+  const color = (t.metadata && t.metadata.color) || '#00ff88';
+  const el = document.createElement('div');
+  el.className = 'target-rect' + (t.enabled ? '' : ' disabled') + (selectedName === t.name ? ' selected' : '');
+  el.dataset.name = t.name;
+  el.style.setProperty('--tc', color);
+  el.style.left   = normToPercent(t.bounds.x);
+  el.style.top    = normToPercent(t.bounds.y);
+  el.style.width  = normToPercent(t.bounds.width);
+  el.style.height = normToPercent(t.bounds.height);
+
+  const count = hitCounts[t.name] || 0;
+  el.innerHTML = `
+    <div class="target-label">
+      ${escHtml(t.displayName)}
+      <span class="target-count-badge">${count}</span>
+    </div>
+  `;
+
+  if (selectedName === t.name) {
+    for (const dir of HANDLE_DIRS) {
+      const h = document.createElement('div');
+      h.className = 'resize-handle';
+      h.dataset.dir = dir;
+      h.dataset.name = t.name;
+      h.addEventListener('mousedown', onHandleMousedown);
+      el.appendChild(h);
+    }
+  }
+
+  el.addEventListener('mousedown', onRectMousedown);
+  el.addEventListener('dblclick', onRectDblclick);
+
+  return el;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Side panel ─────────────────────────────────────────────────────
+function renderSidePanel() {
+  const list = document.getElementById('target-list');
+  const subtitle = document.getElementById('panel-subtitle');
+  const totalHitsEl = document.getElementById('total-hits');
+
+  let totalHits = 0;
+  for (const n in hitCounts) totalHits += hitCounts[n] || 0;
+  totalHitsEl.textContent = totalHits;
+
+  if (targets.length === 0) {
+    subtitle.textContent = '0 targets';
+    list.innerHTML = `
+      <div class="empty-panel">
+        <div class="empty-panel-icon">&#9632;</div>
+        No targets yet.<br>
+        Switch to <strong>Draw mode</strong> and drag a rectangle on the canvas.
+      </div>`;
+    return;
+  }
+
+  subtitle.textContent = targets.length + ' target' + (targets.length === 1 ? '' : 's');
+  list.innerHTML = '';
+  for (const t of targets) {
+    list.appendChild(buildTargetItem(t));
+  }
+}
+
+function buildTargetItem(t) {
+  const color = (t.metadata && t.metadata.color) || '#00ff88';
+  const type  = (t.metadata && t.metadata.type)  || 'counter';
+  const count = hitCounts[t.name] || 0;
+  const isSelected = selectedName === t.name;
+
+  const el = document.createElement('div');
+  el.className = 'target-item' + (isSelected ? ' selected' : '') + (t.enabled ? '' : ' disabled');
+  el.dataset.name = t.name;
+  el.style.setProperty('--item-color', color);
+
+  el.innerHTML = `
+    <div class="target-item-top">
+      <div class="item-swatch" style="background:${escHtml(color)};box-shadow:0 0 6px ${escHtml(color)}44;"></div>
+      <div class="item-names">
+        <div class="item-display-name">${escHtml(t.displayName)}</div>
+        <div class="item-slug">${escHtml(t.name)}</div>
+      </div>
+      <div class="item-type-badge ${type === 'counter' ? 'badge-counter' : 'badge-custom'}">
+        ${type === 'counter' ? 'Counter' : 'Custom'}
+      </div>
+    </div>
+    <div class="target-item-controls">
+      <div class="item-hit-count">Hits: <span>${count}</span></div>
+      <div class="item-toggle">
+        <div class="toggle-switch ${t.enabled ? 'on' : ''}" data-toggle="${escHtml(t.name)}" title="Enable/disable"></div>
+      </div>
+      ${type === 'counter' ? `<button class="item-btn reset" data-reset="${escHtml(t.name)}" title="Reset hit count">&#8635;</button>` : ''}
+      <button class="item-btn" data-edit="${escHtml(t.name)}" title="Edit">&#9998;</button>
+      <button class="item-btn danger" data-delete="${escHtml(t.name)}" title="Delete">&#128465;</button>
+    </div>
+  `;
+
+  // Click to select/focus canvas rect
+  el.addEventListener('click', (e) => {
+    // Don't propagate clicks on buttons/toggles
+    if (e.target.closest('[data-toggle],[data-reset],[data-edit],[data-delete]')) return;
+    if (currentMode === 'select') {
+      selectTarget(t.name);
+    }
+  });
+
+  const toggle = el.querySelector('[data-toggle]');
+  if (toggle) toggle.addEventListener('click', () => toggleTarget(t.name, !t.enabled));
+
+  const resetBtn = el.querySelector('[data-reset]');
+  if (resetBtn) resetBtn.addEventListener('click', () => resetCount(t.name));
+
+  const editBtn = el.querySelector('[data-edit]');
+  if (editBtn) editBtn.addEventListener('click', () => openEditModal(t.name));
+
+  const deleteBtn = el.querySelector('[data-delete]');
+  if (deleteBtn) deleteBtn.addEventListener('click', () => confirmDelete(t.name));
+
+  return el;
+}
+
+// ── Target selection ───────────────────────────────────────────────
+function selectTarget(name) {
+  selectedName = name;
+  renderAll();
+  // Scroll item into view
+  const el = document.querySelector(`.target-item[data-name="${name}"]`);
+  if (el) el.scrollIntoView({ block: 'nearest' });
+}
+
+function deselectTarget() {
+  if (selectedName) {
+    selectedName = null;
+    renderAll();
+  }
+}
+
+// ── Draw mode mouse events ─────────────────────────────────────────
+preview.addEventListener('mousedown', (e) => {
+  if (currentMode !== 'draw') return;
+  if (e.button !== 0) return;
+  e.preventDefault();
+
+  const r = preview.getBoundingClientRect();
+  drawState = {
+    startX: e.clientX - r.left,
+    startY: e.clientY - r.top,
+    previewW: r.width,
+    previewH: r.height,
+  };
+
+  drawPreview.style.display = 'block';
+  drawPreview.style.left   = drawState.startX + 'px';
+  drawPreview.style.top    = drawState.startY + 'px';
+  drawPreview.style.width  = '0px';
+  drawPreview.style.height = '0px';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (currentMode !== 'draw' || !drawState) return;
+  const r = preview.getBoundingClientRect();
+  const curX = clamp(e.clientX - r.left, 0, r.width);
+  const curY = clamp(e.clientY - r.top,  0, r.height);
+
+  const x = Math.min(drawState.startX, curX);
+  const y = Math.min(drawState.startY, curY);
+  const w = Math.abs(curX - drawState.startX);
+  const h = Math.abs(curY - drawState.startY);
+
+  drawPreview.style.left   = x + 'px';
+  drawPreview.style.top    = y + 'px';
+  drawPreview.style.width  = w + 'px';
+  drawPreview.style.height = h + 'px';
+
+  // Normalized dims
+  const nw = w / r.width;
+  const nh = h / r.height;
+  dimReadout.textContent = `${nw.toFixed(3)} × ${nh.toFixed(3)}`;
+
+  drawState._curX = curX;
+  drawState._curY = curY;
+});
+
+document.addEventListener('mouseup', (e) => {
+  if (currentMode !== 'draw' || !drawState) return;
+  const r = preview.getBoundingClientRect();
+  const curX = clamp(e.clientX - r.left, 0, r.width);
+  const curY = clamp(e.clientY - r.top,  0, r.height);
+
+  const x = Math.min(drawState.startX, curX);
+  const y = Math.min(drawState.startY, curY);
+  const w = Math.abs(curX - drawState.startX);
+  const h = Math.abs(curY - drawState.startY);
+
+  drawPreview.style.display = 'none';
+  drawState = null;
+
+  // Ignore tiny draws (less than 1%)
+  if (w / r.width < 0.01 || h / r.height < 0.01) return;
+
+  const bounds = {
+    x: x / r.width,
+    y: y / r.height,
+    width:  w / r.width,
+    height: h / r.height,
+  };
+
+  openCreateModal(bounds, e.clientX, e.clientY);
+});
+
+// ── Select mode mouse events ───────────────────────────────────────
+function onRectMousedown(e) {
+  if (currentMode !== 'select') return;
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const name = e.currentTarget.dataset.name;
+  selectTarget(name);
+
+  const target = targets.find(t => t.name === name);
+  if (!target) return;
+
+  const r = preview.getBoundingClientRect();
+  dragState = {
+    type: 'move',
+    name,
+    startMouseX: e.clientX,
+    startMouseY: e.clientY,
+    startBounds: { ...target.bounds },
+    previewW: r.width,
+    previewH: r.height,
+    moved: false,
+  };
+}
+
+function onHandleMousedown(e) {
+  if (currentMode !== 'select') return;
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const name = e.currentTarget.dataset.name;
+  const dir  = e.currentTarget.dataset.dir;
+  const target = targets.find(t => t.name === name);
+  if (!target) return;
+
+  const r = preview.getBoundingClientRect();
+  dragState = {
+    type: 'resize',
+    name,
+    dir,
+    startMouseX: e.clientX,
+    startMouseY: e.clientY,
+    startBounds: { ...target.bounds },
+    previewW: r.width,
+    previewH: r.height,
+    moved: false,
+  };
+}
+
+function onRectDblclick(e) {
+  if (currentMode !== 'select') return;
+  const name = e.currentTarget.dataset.name;
+  openEditModal(name);
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragState) return;
+  dragState.moved = true;
+
+  const dx = (e.clientX - dragState.startMouseX) / dragState.previewW;
+  const dy = (e.clientY - dragState.startMouseY) / dragState.previewH;
+  const sb = dragState.startBounds;
+  let nb = { ...sb };
+
+  if (dragState.type === 'move') {
+    nb.x = clamp(sb.x + dx, 0, 1 - sb.width);
+    nb.y = clamp(sb.y + dy, 0, 1 - sb.height);
+  } else {
+    // resize
+    const d = dragState.dir;
+    if (d.includes('w')) {
+      const newX = clamp(sb.x + dx, 0, sb.x + sb.width - 0.02);
+      nb.width  = sb.x + sb.width - newX;
+      nb.x = newX;
+    }
+    if (d.includes('e')) {
+      nb.width = clamp(sb.width + dx, 0.02, 1 - sb.x);
+    }
+    if (d.includes('n')) {
+      const newY = clamp(sb.y + dy, 0, sb.y + sb.height - 0.02);
+      nb.height = sb.y + sb.height - newY;
+      nb.y = newY;
+    }
+    if (d === 's' || d === 'se' || d === 'sw') {
+      nb.height = clamp(sb.height + dy, 0.02, 1 - sb.y);
+    }
+  }
+
+  // Live-update the rect on canvas for visual feedback
+  const el = targetLayer.querySelector(`[data-name="${dragState.name}"]`);
+  if (el) {
+    el.style.left   = normToPercent(nb.x);
+    el.style.top    = normToPercent(nb.y);
+    el.style.width  = normToPercent(nb.width);
+    el.style.height = normToPercent(nb.height);
+  }
+
+  dragState._pendingBounds = nb;
+});
+
+document.addEventListener('mouseup', async (e) => {
+  if (!dragState || !dragState.moved) {
+    dragState = null;
+    return;
+  }
+
+  const nb = dragState._pendingBounds;
+  const name = dragState.name;
+  dragState = null;
+
+  if (!nb) return;
+
+  // Find the target and update its bounds
+  const target = targets.find(t => t.name === name);
+  if (!target) return;
+
+  const updated = { ...target, bounds: nb };
+  await saveTarget(updated, true);
+});
+
+// ── Preview click — deselect in select mode ────────────────────────
+preview.addEventListener('click', (e) => {
+  if (currentMode === 'select') {
+    if (e.target === preview || e.target === targetLayer || e.target === gridOverlay) {
+      deselectTarget();
+    }
+  }
+});
+
+// ── Modal ──────────────────────────────────────────────────────────
+let modalMode = 'create'; // 'create' | 'edit'
+let pendingBounds = null;
+
+function openCreateModal(bounds, clientX, clientY) {
+  modalMode = 'create';
+  pendingBounds = bounds;
+
+  document.getElementById('modal-title').textContent = 'New Target';
+  document.getElementById('modal-submit').textContent = 'Create';
+  document.getElementById('f-display-name').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-type').value = 'counter';
+  document.getElementById('f-color').value = '#00ff88';
+  document.getElementById('f-source').value = '';
+  document.getElementById('f-editing-name').value = '';
+  document.getElementById('f-name-hint').textContent = '';
+  document.getElementById('f-name-hint').className = 'form-hint';
+  clearModalError();
+
+  document.getElementById('f-x').value = bounds.x;
+  document.getElementById('f-y').value = bounds.y;
+  document.getElementById('f-width').value  = bounds.width;
+  document.getElementById('f-height').value = bounds.height;
+
+  modalOverlay.classList.add('open');
+  setTimeout(() => document.getElementById('f-display-name').focus(), 50);
+}
+
+function openEditModal(name) {
+  const t = targets.find(t => t.name === name);
+  if (!t) return;
+
+  modalMode = 'edit';
+  pendingBounds = { ...t.bounds };
+
+  document.getElementById('modal-title').textContent = 'Edit Target';
+  document.getElementById('modal-submit').textContent = 'Save';
+  document.getElementById('f-display-name').value = t.displayName;
+  document.getElementById('f-name').value = t.name;
+  document.getElementById('f-type').value  = (t.metadata && t.metadata.type) || 'counter';
+  document.getElementById('f-color').value = (t.metadata && t.metadata.color) || '#00ff88';
+  document.getElementById('f-source').value = (t.metadata && t.metadata.sourceName) || '';
+  document.getElementById('f-editing-name').value = t.name;
+  document.getElementById('f-name-hint').textContent = '';
+  document.getElementById('f-name-hint').className = 'form-hint';
+  clearModalError();
+
+  document.getElementById('f-x').value = t.bounds.x;
+  document.getElementById('f-y').value = t.bounds.y;
+  document.getElementById('f-width').value  = t.bounds.width;
+  document.getElementById('f-height').value = t.bounds.height;
+
+  modalOverlay.classList.add('open');
+  setTimeout(() => document.getElementById('f-display-name').focus(), 50);
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('open');
+  pendingBounds = null;
+}
+
+function clearModalError() {
+  const el = document.getElementById('modal-error');
+  el.textContent = '';
+  el.classList.remove('visible');
+}
+
+function showModalError(msg) {
+  const el = document.getElementById('modal-error');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+// Auto-slug display name → name field
+document.getElementById('f-display-name').addEventListener('input', () => {
+  const nameField = document.getElementById('f-name');
+  // Only auto-fill if name is empty or was previously auto-derived
+  if (!nameField.dataset.userEdited || nameField.dataset.userEdited === 'false') {
+    const slug = toSlug(document.getElementById('f-display-name').value);
+    nameField.value = slug;
+    checkDuplicateName(slug);
+  }
+});
+
+document.getElementById('f-name').addEventListener('input', (e) => {
+  e.target.dataset.userEdited = 'true';
+  checkDuplicateName(e.target.value);
+});
+
+document.getElementById('f-name').addEventListener('blur', (e) => {
+  // Force slug format on blur
+  e.target.value = toSlug(e.target.value);
+});
+
+function checkDuplicateName(slug) {
+  const hint = document.getElementById('f-name-hint');
+  const editingName = document.getElementById('f-editing-name').value;
+  const existing = targets.find(t => t.name === slug);
+  if (existing && existing.name !== editingName && slug) {
+    hint.textContent = 'Warning: a target with this name already exists — saving will overwrite it.';
+    hint.className = 'form-hint warn';
+  } else {
+    hint.textContent = '';
+    hint.className = 'form-hint';
+  }
+}
+
+async function submitModal() {
+  const submitBtn = document.getElementById('modal-submit');
+  clearModalError();
+
+  const displayName = document.getElementById('f-display-name').value.trim();
+  const name        = toSlug(document.getElementById('f-name').value.trim());
+  const type        = document.getElementById('f-type').value;
+  const color       = document.getElementById('f-color').value;
+  const sourceName  = document.getElementById('f-source').value.trim();
+
+  const bounds = {
+    x:      parseFloat(document.getElementById('f-x').value),
+    y:      parseFloat(document.getElementById('f-y').value),
+    width:  parseFloat(document.getElementById('f-width').value),
+    height: parseFloat(document.getElementById('f-height').value),
+  };
+
+  // Client-side validation
+  if (!displayName) { showModalError('Display name is required.'); return; }
+  if (!name)        { showModalError('Name (slug) is required.'); return; }
+
+  const target = {
+    name,
+    displayName,
+    bounds,
+    enabled: true,
+    metadata: {
+      type,
+      color,
+      ...(sourceName ? { sourceName } : {}),
+    },
+  };
+
+  // If editing, preserve enabled state
+  if (modalMode === 'edit') {
+    const existing = targets.find(t => t.name === document.getElementById('f-editing-name').value);
+    if (existing) target.enabled = existing.enabled;
+  }
+
+  submitBtn.disabled = true;
+  const ok = await saveTarget(target, false);
+  submitBtn.disabled = false;
+
+  if (ok) {
+    closeModal();
+    document.getElementById('f-name').dataset.userEdited = 'false';
+  }
+}
+
+async function saveTarget(target, silent) {
+  try {
+    const res = await apiFetch('/api/targets', {
+      method: 'POST',
+      body: JSON.stringify(target),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Server error' }));
+      if (!silent) showModalError(data.error || 'Validation error');
+      return false;
+    }
+
+    await loadTargets();
+    if (!silent) showToast(`"${target.displayName}" saved`, 'success');
+    return true;
+  } catch (e) {
+    if (!silent) showModalError('Server unreachable');
+    return false;
+  }
+}
+
+// ── Toggle enabled ─────────────────────────────────────────────────
+async function toggleTarget(name, enabled) {
+  try {
+    const res = await apiFetch(`/api/targets/${encodeURIComponent(name)}/toggle`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
+    });
+    if (res.ok) {
+      await loadTargets();
+      showToast(`"${name}" ${enabled ? 'enabled' : 'disabled'}`, 'info');
+    }
+  } catch (e) {
+    showToast('Failed to toggle target', 'error');
+  }
+}
+
+// ── Delete ─────────────────────────────────────────────────────────
+let pendingDeleteName = null;
+
+function confirmDelete(name) {
+  pendingDeleteName = name;
+  const t = targets.find(t => t.name === name);
+  document.getElementById('confirm-name').textContent = t ? `"${t.displayName}"` : `"${name}"`;
+  confirmOvl.classList.add('open');
+}
+
+function closeConfirm() {
+  confirmOvl.classList.remove('open');
+  pendingDeleteName = null;
+}
+
+document.getElementById('confirm-ok').addEventListener('click', async () => {
+  if (!pendingDeleteName) return;
+  const name = pendingDeleteName;
+  closeConfirm();
+  try {
+    const res = await apiFetch(`/api/targets/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (res.ok) {
+      if (selectedName === name) selectedName = null;
+      await loadTargets();
+      showToast(`"${name}" deleted`, 'warn');
+    }
+  } catch (e) {
+    showToast('Failed to delete target', 'error');
+  }
+});
+
+// ── Reset counts ───────────────────────────────────────────────────
+async function resetCount(name) {
+  try {
+    await apiFetch(`/api/targets/${encodeURIComponent(name)}/hitcount`, { method: 'DELETE' });
+    await loadTargets();
+    showToast(`Count reset for "${name}"`, 'info');
+  } catch (e) {
+    showToast('Failed to reset count', 'error');
+  }
+}
+
+async function resetAllCounts() {
+  try {
+    await apiFetch('/api/targets/hitcounts', { method: 'DELETE' });
+    await loadTargets();
+    showToast('All hit counts reset', 'info');
+  } catch (e) {
+    showToast('Failed to reset counts', 'error');
+  }
+}
+
+// ── Test mode ──────────────────────────────────────────────────────
+function setupTestMode() {
+  if (heat) return; // already connected
+
+  heat = new HeatClient('designer', {
+    apiUrl: 'ws://localhost:7777',
+    debugMode: false,
+  });
+
+  heat.on('connected', () => {
+    connDot.classList.add('connected');
+    connLabel.textContent = 'WS Connected';
+    showToast('Test mode: WebSocket connected', 'success');
+  });
+
+  heat.on('disconnected', () => {
+    connDot.classList.remove('connected');
+    connLabel.textContent = 'WS Disconnected';
+  });
+
+  heat.on('target_hit', (e) => {
+    const data = e.detail;
+    handleTargetHit(data);
+  });
+}
+
+function teardownTestMode() {
+  if (heat) {
+    heat.disconnect && heat.disconnect();
+    heat = null;
+  }
+  connDot.classList.remove('connected');
+  connLabel.textContent = 'Offline';
+}
+
+function handleTargetHit(data) {
+  if (!data || !data.hit) return;
+  const { targetName, relativeX, relativeY } = data.hit;
+  const identity   = data.identity || {};
+  const totalHits  = data.totalHits || 0;
+
+  // Update local hit count
+  hitCounts[targetName] = (hitCounts[targetName] || 0) + 1;
+
+  const target = targets.find(t => t.name === targetName);
+  if (!target) return;
+
+  // Flash the rectangle
+  const el = targetLayer.querySelector(`[data-name="${targetName}"]`);
+  if (el) {
+    // GSAP border flash
+    gsap.to(el, {
+      duration: 0,
+      onComplete: () => {
+        el.classList.add('hit-flash');
+        setTimeout(() => el.classList.remove('hit-flash'), 600);
+      }
+    });
+
+    // Update count badge
+    const badge = el.querySelector('.target-count-badge');
+    if (badge) badge.textContent = hitCounts[targetName];
+
+    // Show hit pill
+    const color = (target.metadata && target.metadata.color) || '#00ff88';
+    showHitPill(el, identity.displayName || 'Anonymous', totalHits, color, relativeX, relativeY);
+  }
+
+  // Update side panel count
+  const itemCount = document.querySelector(`.target-item[data-name="${targetName}"] .item-hit-count span`);
+  if (itemCount) itemCount.textContent = hitCounts[targetName];
+
+  // Update footer total
+  let total = 0;
+  for (const n in hitCounts) total += hitCounts[n] || 0;
+  document.getElementById('total-hits').textContent = total;
+}
+
+function showHitPill(rectEl, displayName, totalHits, color, relX, relY) {
+  const r = rectEl.getBoundingClientRect();
+  const previewR = preview.getBoundingClientRect();
+
+  const pill = document.createElement('div');
+  pill.className = 'hit-pill';
+  pill.style.setProperty('--tc', color);
+  pill.textContent = `${displayName} — ${totalHits} hits`;
+
+  // Position relative to stream-preview
+  const relPx = (r.left - previewR.left) + (relX || 0.5) * r.width;
+  const relPy = (r.top  - previewR.top)  + (relY || 0) * r.height - 28;
+  pill.style.left = relPx + 'px';
+  pill.style.top  = relPy + 'px';
+  pill.style.transform = 'translateX(-50%)';
+
+  preview.appendChild(pill);
+
+  gsap.fromTo(pill,
+    { opacity: 0, y: 6, scale: 0.9 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'back.out(1.5)',
+      onComplete: () => {
+        gsap.to(pill, { opacity: 0, y: -8, duration: 0.4, delay: 2, ease: 'power2.in',
+          onComplete: () => pill.remove() });
+      }
+    }
+  );
+}
+
+// ── Test mode click simulation ─────────────────────────────────────
+preview.addEventListener('click', (e) => {
+  if (currentMode !== 'test') return;
+  const norm = previewToNorm(e.clientX, e.clientY);
+  // The HeatClient click simulation goes through the server
+  // In test mode we just send a synthetic click via ws
+  if (heat && heat.sendClick) {
+    heat.sendClick(norm.x, norm.y);
+  }
+  // Show a local ripple
+  showTestRipple(e.clientX, e.clientY);
+});
+
+function showTestRipple(cx, cy) {
+  const r = preview.getBoundingClientRect();
+  const ripple = document.createElement('div');
+  ripple.style.cssText = `
+    position: absolute;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+    z-index: 20;
+    left: ${cx - r.left}px;
+    top: ${cy - r.top}px;
+  `;
+  preview.appendChild(ripple);
+  gsap.to(ripple, {
+    scale: 2.5,
+    opacity: 0,
+    duration: 0.6,
+    ease: 'power2.out',
+    onComplete: () => ripple.remove(),
+  });
+}
+
+// ── Toast notifications ────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const stack = document.getElementById('toast-stack');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = msg;
+  stack.appendChild(toast);
+
+  gsap.fromTo(toast,
+    { opacity: 0, y: -8, scale: 0.92 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'back.out(1.5)',
+      onComplete: () => {
+        gsap.to(toast, { opacity: 0, y: -8, duration: 0.35, delay: 2, ease: 'power2.in',
+          onComplete: () => toast.remove() });
+      }
+    }
+  );
+}
+
+// ── Help overlay ───────────────────────────────────────────────────
+function toggleHelp() {
+  helpOvl.classList.toggle('open');
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  // Skip if typing in an input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  switch (e.key.toLowerCase()) {
+    case 'd': setMode('draw'); break;
+    case 's': setMode('select'); break;
+    case 't': setMode('test'); break;
+    case 'g': toggleGrid(); break;
+    case '?': toggleHelp(); break;
+    case 'escape':
+      if (helpOvl.classList.contains('open')) { toggleHelp(); break; }
+      if (confirmOvl.classList.contains('open')) { closeConfirm(); break; }
+      if (modalOverlay.classList.contains('open')) { closeModal(); break; }
+      if (currentMode === 'test') { setMode('select'); break; }
+      deselectTarget();
+      break;
+    case 'delete':
+    case 'backspace':
+      if (selectedName && currentMode === 'select') {
+        e.preventDefault();
+        confirmDelete(selectedName);
+      }
+      break;
+  }
+});
+
+// Close modal on overlay click
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+confirmOvl.addEventListener('click', (e) => {
+  if (e.target === confirmOvl) closeConfirm();
+});
+
+helpOvl.addEventListener('click', (e) => {
+  if (e.target === helpOvl) toggleHelp();
+});
+
+// Enter to submit modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && modalOverlay.classList.contains('open')) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) {
+      submitModal();
+    }
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────
+buildGrid();
+loadTargets();
+setMode('draw');
+</script>
+</body>
+</html>

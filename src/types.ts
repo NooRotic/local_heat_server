@@ -197,12 +197,16 @@ export interface HitTestResult {
 /**
  * Target hit message broadcast when a click lands on a registered target.
  * Emitted alongside the enriched click — one message per matching target.
+ * `totalHits` is the target's cumulative hit count after this hit (since
+ * last reset or server start). Overlays with counter-type targets can
+ * render this directly; custom-type targets can ignore it.
  */
 export interface TargetHitMessage {
   type: 'target_hit';
   userId: string;
   identity: IdentityResponse;
   hit: HitTestResult;
+  totalHits: number;
   timestamp: number;
 }
 

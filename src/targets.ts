@@ -16,6 +16,7 @@ const TARGETS_PATH = join(process.cwd(), 'targets.json');
  */
 export class ClickTargetManager {
   private targets = new Map<string, ClickTarget>();
+  private hitCounts = new Map<string, number>();
   private loaded = false;
 
   /** Load targets from targets.json (non-fatal if missing) */
@@ -51,15 +52,54 @@ export class ClickTargetManager {
   /**
    * Test a normalized click coordinate against all registered targets.
    * Returns every target the click landed inside (disabled targets excluded).
+   * Also increments per-target hit counts for targets with counter semantics.
    */
   hitTest(x: number, y: number): HitTestResult[] {
     const results: HitTestResult[] = [];
     for (const target of this.targets.values()) {
       if (!target.enabled) continue;
       const hit = this.hitTestOne(x, y, target);
-      if (hit) results.push(hit);
+      if (hit) {
+        results.push(hit);
+        this.incrementHit(target.name);
+      }
     }
     return results;
+  }
+
+  /** Increment hit count for a target. Called automatically from hitTest(). */
+  incrementHit(name: string): number {
+    const next = (this.hitCounts.get(name) || 0) + 1;
+    this.hitCounts.set(name, next);
+    return next;
+  }
+
+  /** Get the current hit count for a target (0 if never hit). */
+  getHitCount(name: string): number {
+    return this.hitCounts.get(name) || 0;
+  }
+
+  /** Get all hit counts as a record. */
+  getAllHitCounts(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const target of this.targets.values()) {
+      out[target.name] = this.hitCounts.get(target.name) || 0;
+    }
+    return out;
+  }
+
+  /** Reset hit count for a single target. Returns the old count. */
+  resetHitCount(name: string): number {
+    const old = this.hitCounts.get(name) || 0;
+    this.hitCounts.set(name, 0);
+    return old;
+  }
+
+  /** Reset all hit counts. */
+  resetAllHitCounts(): void {
+    for (const name of this.hitCounts.keys()) {
+      this.hitCounts.set(name, 0);
+    }
   }
 
   /** Test a single target. Returns the hit result or null if miss. */
@@ -86,6 +126,7 @@ export class ClickTargetManager {
 
   /** Remove a target by name. Returns true if the target existed. */
   remove(name: string): boolean {
+    this.hitCounts.delete(name);
     return this.targets.delete(name);
   }
 
@@ -110,6 +151,7 @@ export class ClickTargetManager {
   /** Clear all targets (used in tests) */
   clear(): void {
     this.targets.clear();
+    this.hitCounts.clear();
   }
 
   /**

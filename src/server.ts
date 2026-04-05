@@ -209,7 +209,8 @@ class HeatServer {
       JSON.stringify(enriched)
     );
 
-    // Hit-test against registered targets, broadcast target_hit for each match
+    // Hit-test against registered targets, broadcast target_hit for each match.
+    // hitTest() auto-increments the counter; we read the post-increment total.
     const hits = this.targetManager.hitTest(x, y);
     const now = Date.now();
     for (const hit of hits) {
@@ -218,6 +219,7 @@ class HeatServer {
         userId: message.id,
         identity,
         hit,
+        totalHits: this.targetManager.getHitCount(hit.targetName),
         timestamp: now,
       };
       this.channelManager.broadcast(client.channelId, JSON.stringify(hitMessage));
